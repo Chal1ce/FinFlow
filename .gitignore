@@ -1,0 +1,58 @@
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+logs/
+
+# Virtual environments
+.venv/
+.venv-flywheel/
+venv/
+env/
+ENV/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+config/*local*
+config/*secret*
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Generated data lake contents
+data/raw_pdfs/
+data/named_pdfs/
+data/parsed_md/
+data/chunks_jsonl/
+data/faiss_index/
+data/quarantine/
+data/.tmp/
+data/manifests/
+data/discovery/
+data/runs/
+data/state/
+data/.collector.lock
+data/.scholarly.lock
+data/
+
+# Runtime logs
+logs/
+*.log

@@ -1,0 +1,16 @@
+{
+  "pipelines": {
+    "local_financial": {
+      "description": "Import local financial PDFs, run OCR, assess OCR quality, normalize metadata, govern content, validate it, and publish an immutable local delivery package.",
+      "stages": ["ingest", "ocr", "ocr_quality", "metadata", "govern", "validate", "publish"]
+    },
+    "collected_financial": {
+      "description": "Adopt successful reports collected for one batch, then run the local financial OCR-to-delivery workflow.",
+      "stages": ["adopt_collected", "ocr", "ocr_quality", "metadata", "govern", "validate", "publish"]
+    },
+    "govern_and_publish": {
+      "description": "Govern existing OCR output, validate it, and publish an immutable local delivery package.",
+      "stages": ["govern", "validate", "publish"]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="210" viewBox="0 0 960 210" role="img" aria-labelledby="title desc">
+  <title id="title">文档到预训练数据的处理流程</title>
+  <desc id="desc">采集 PDF、OCR、文本与图表治理、独立审核、语料发布，各阶段保留来源和血缘。</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#68758a"/></marker></defs>
+  <rect width="960" height="210" rx="16" fill="#f6f8fb"/>
+  <g fill="#ffffff" stroke="#c8d2e1" stroke-width="1.5">
+    <rect x="24" y="40" width="156" height="80" rx="10"/>
+    <rect x="213" y="40" width="156" height="80" rx="10"/>
+    <rect x="402" y="40" width="156" height="80" rx="10"/>
+    <rect x="591" y="40" width="156" height="80" rx="10"/>
+    <rect x="780" y="40" width="156" height="80" rx="10"/>
+  </g>
+  <g stroke="#68758a" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M180 80H207"/><path d="M369 80H396"/><path d="M558 80H585"/><path d="M747 80H774"/>
+  </g>
+  <g font-family="system-ui, sans-serif" text-anchor="middle" fill="#26364d" font-size="19">
+    <text x="102" y="86">采集 PDF</text><text x="291" y="86">OCR</text>
+    <text x="480" y="76">文本 / 图表治理</text><text x="480" y="102" font-size="14">原文、描述、翻译、改写</text>
+    <text x="669" y="86">独立审核</text><text x="858" y="86">语料发布</text>
+    <text x="480" y="168" font-size="16" fill="#5c6e86">全流程记录来源、版本、处理任务与血缘</text>
+  </g>
+</svg>

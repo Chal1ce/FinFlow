@@ -1,0 +1,4 @@
+# Install only after preflight and an initial foreground run succeed.
+# Daily 03:00; scheduling uses the host timezone (set to Asia/Shanghai).
+# The script creates logs/ and redirects its own output, including failures.
+0 3 * * * /absolute/path/to/FinFlow/scripts/run_flywheel.sh

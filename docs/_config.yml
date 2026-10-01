@@ -1,0 +1,40 @@
+title: FinFlow
+description: 金融文档治理与每日预训练数据飞轮使用说明
+remote_theme: just-the-docs/just-the-docs@v0.12.0
+url: https://chal1ce.github.io
+baseurl: /FinFlow
+repository: Chal1ce/FinFlow
+markdown: kramdown
+kramdown:
+  input: GFM
+plugins:
+  - jekyll-remote-theme
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+nav_enabled: true
+color_scheme: light
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 3
+  rel_url: false
+enable_copy_code_button: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: 返回顶部
+mermaid:
+  version: "11.12.0"
+aux_links:
+  GitHub 仓库:
+    - https://github.com/Chal1ce/FinFlow
+gh_edit_link: true
+gh_edit_link_text: 在 GitHub 上编辑此页
+gh_edit_repository: https://github.com/Chal1ce/FinFlow
+gh_edit_branch: main
+gh_edit_source: docs
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

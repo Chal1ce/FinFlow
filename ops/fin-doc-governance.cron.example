@@ -1,0 +1,6 @@
+# Install by running `crontab -e` and copying the schedule line below.
+# Compatibility entrypoint for the daily flywheel; replace the repository path.
+# Run every day at 03:00 in the machine's local timezone.
+# Configure vision/review models, tokenizer and source policy; run preflight first.
+# The script creates logs/ and redirects its own output.
+0 3 * * * /absolute/path/to/FinFlow/scripts/run_collection.sh
