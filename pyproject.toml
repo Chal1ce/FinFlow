@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finflow"
+version = "0.1.0"
+description = "Local-first financial document data flywheel with OCR, governance, lineage, and pretraining corpus generation"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "certifi>=2024.2.2",
+  "openai>=1.0.0",
+  "pypdf>=5.0.0",
+  "requests>=2.31",
+  "Pillow>=10.0",
+  "PyMuPDF>=1.24",
+  "tokenizers>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[tool.setuptools.packages.find]
+include = ["core*", "delivery*", "ingestion*", "processing*", "qc*", "remote*", "spiders*", "storage*", "training*", "workflow*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 140
+extend-exclude = ["data"]
+
+[tool.ruff.lint]
+select = ["E", "F"]

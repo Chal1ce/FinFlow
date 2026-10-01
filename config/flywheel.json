@@ -1,0 +1,23 @@
+{
+  "schema_version": "flywheel-v1",
+  "collection_config": "config/collection.json",
+  "ocr_backend": "local",
+  "ocr_options": {"useDocOrientationClassify": false, "useDocUnwarping": false, "useTableRecognition": true},
+  "governance_backend": "auto",
+  "methods": ["original", "visual"],
+  "translation_language": "English",
+  "max_tokens": 2048,
+  "max_tasks": 100,
+  "max_model_requests": 50,
+  "max_seconds": 7200,
+  "max_attempts": 3,
+  "pdf_recheck_days": 1,
+  "live_discovery": true,
+  "retry_seconds": 300,
+  "validation_fraction": 0.05,
+  "source_policy": {},
+  "require_ocr_pass": true,
+  "review_prompt_version": "evidence-review-v1",
+  "visual_prompt_version": "visual-description-v1",
+  "generation_prompt_version": "faithful-transform-v1"
+}

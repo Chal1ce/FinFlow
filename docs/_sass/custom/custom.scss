@@ -1,0 +1,16 @@
+// Keep screenshots and diagrams within the article on desktop and mobile.
+.main-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+}
+
+.main-content figure {
+  margin: 1.5rem 0;
+}
+
+.main-content figcaption {
+  color: #5c6677;
+  font-size: 0.875rem;
+}

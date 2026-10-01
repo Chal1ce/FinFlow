@@ -1,0 +1,79 @@
+{
+  "data_root": "data",
+  "min_pdf_size_bytes": 100,
+  "http": {
+    "timeout_seconds": 60,
+    "min_interval_seconds": 0.8,
+    "user_agent": "fin-doc-governance/0.1"
+  },
+  "retry": {
+    "attempts": 3,
+    "backoff_seconds": 2
+  },
+  "sources": [
+    {
+      "name": "cninfo",
+      "enabled": true,
+      "priority": 10
+    },
+    {
+      "name": "sse",
+      "enabled": true,
+      "priority": 20
+    }
+  ],
+  "scholarly": {
+    "enabled": true,
+    "download_open_access_pdfs": true,
+    "ocr_max_per_run": null,
+    "ocr_delay_seconds": 1,
+    "sources": [
+      {
+        "name": "crossref",
+        "enabled": true,
+        "priority": 30,
+        "rows": 50
+      },
+      {
+        "name": "openalex",
+        "enabled": true,
+        "priority": 40,
+        "per_page": 50
+      }
+    ],
+    "targets": [
+      {
+        "name": "financial-document-governance",
+        "query": "financial reporting corporate governance ESG",
+        "start_year": 2022,
+        "end_year": "auto",
+        "end_year_lag": 0,
+        "work_types": ["journal-article"],
+        "max_results": 100
+      }
+    ]
+  },
+  "targets": [
+    {
+      "stock_code": "600519",
+      "start_year": 2022,
+      "end_year": "auto",
+      "end_year_lag": 1,
+      "report_type": "annual"
+    },
+    {
+      "stock_code": "300750",
+      "start_year": 2022,
+      "end_year": "auto",
+      "end_year_lag": 1,
+      "report_type": "annual"
+    },
+    {
+      "stock_code": "000858",
+      "start_year": 2022,
+      "end_year": "auto",
+      "end_year_lag": 1,
+      "report_type": "annual"
+    }
+  ]
+}
