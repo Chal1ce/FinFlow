@@ -1,0 +1,13 @@
+{% assign translation = site.data.translations[page.translation_key] %}
+{% if translation %}
+<nav class="language-switch" aria-label="Language / 语言">
+  {% if site.docs_language == 'zh' %}
+    <span aria-current="true" lang="zh-CN">中文</span>
+    <a href="{{ translation.url }}" lang="en" hreflang="en"{% unless translation.available %} title="此页尚未翻译，打开英文首页"{% endunless %}>English{% unless translation.available %} ↗{% endunless %}</a>
+  {% else %}
+    <a href="{{ translation.url }}" lang="zh-CN" hreflang="zh-CN">中文</a>
+    <span aria-current="true" lang="en">English</span>
+    {% if translation.stale %}<span class="translation-status" title="The Chinese source has changed. Consult it for the latest details.">Translation update pending</span>{% endif %}
+  {% endif %}
+</nav>
+{% endif %}

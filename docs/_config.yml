@@ -3,6 +3,12 @@ description: 金融文档治理与每日预训练数据飞轮使用说明
 remote_theme: just-the-docs/just-the-docs@v0.12.0
 url: https://chal1ce.github.io
 baseurl: /FinFlow
+exclude:
+  - en
+  - Gemfile
+  - Gemfile.lock
+  - translations.json
+  - _config.language.yml
 repository: Chal1ce/FinFlow
 markdown: kramdown
 kramdown:
@@ -10,6 +16,8 @@ kramdown:
 plugins:
   - jekyll-remote-theme
   - jekyll-relative-links
+  - jekyll-seo-tag
+  - jekyll-include-cache
 relative_links:
   enabled: true
 nav_enabled: true

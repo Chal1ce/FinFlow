@@ -4,52 +4,67 @@ nav_order: 2
 parent: 运维与排错
 ---
 
-# 使用 GitHub Pages 发布文档
+# 使用 GitHub Pages 发布双语文档
 
-[文档首页](index.md) · [项目仓库](https://github.com/Chal1ce/FinFlow)
+`.github/workflows/docs.yml` 分别构建中文、英文 Just the Docs 站点，合并发布。
+两种语言的侧栏和搜索彼此独立，顶部可切换到对应页面。
 
-仓库已准备 `docs/index.md`、Just the Docs 主题、侧栏导航、搜索及 Markdown 相对链接转换。
-发布来源选择 `main` 分支的 `/docs`，不需要另外复制一份使用说明。
+## 首次启用或从旧方式迁移
 
-## 首次启用
+1. 将文档和工作流提交并推送到 `main`。
+2. 打开[仓库 Pages 设置](https://github.com/Chal1ce/FinFlow/settings/pages)。
+3. 在 **Build and deployment → Source** 选择 **GitHub Actions**。
+4. 打开 [Actions](https://github.com/Chal1ce/FinFlow/actions)，选择 **Documentation**。
+5. 如推送时还未启用 Pages，点击 **Run workflow**，选择 `main`，重新运行。
+6. 等待 `build` 和 `deploy` 都成功，再通过 Pages 设置的 **Visit site** 打开网站。
 
-1. 打开[仓库 Pages 设置](https://github.com/Chal1ce/FinFlow/settings/pages)。
-2. 在 **Build and deployment** 下，将 **Source** 设为 **Deploy from a branch**。
-3. **Branch** 选择 `main`，目录选择 `/docs`。
-4. 点击 **Save**。
-5. 在仓库 **Actions** 页面查看 `pages build and deployment` 的构建与部署结果。
-6. 成功后，回到 Pages 设置，通过显示的 **Visit site** 打开网站。
+旧的 `Deploy from a branch` / `main` + `/docs` 方式需要切换，无法完成本项目的双语构建。
+官方步骤见 [GitHub 自定义 Pages 工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
-默认网站地址为 [https://chal1ce.github.io/FinFlow/](https://chal1ce.github.io/FinFlow/)。
-第一次构建完成前，该地址可能返回 404；以 Pages 设置和 Actions 的部署结果为准。
-操作对应 [GitHub 官方发布来源说明](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)。
+## 网站地址
 
-## 以后如何更新
+- [默认入口](https://chal1ce.github.io/FinFlow/)：跳转中文首页。
+- [中文](https://chal1ce.github.io/FinFlow/zh/)。
+- [English](https://chal1ce.github.io/FinFlow/en/)。
 
-编辑 `docs/` 中的 Markdown，然后提交并推送到 `main`，GitHub 会重新构建和发布。
-修改主题、网站标题或仓库路径时，编辑 `docs/_config.yml`。
+旧的 `/FinFlow/quick-start.html` 等页面会跳转到对应中文页，浏览器脚本保留查询参数和锚点。
+根目录仅提供兼容跳转；站内搜索使用各语言自身的索引。
 
-文档内部继续使用 `.md` 相对链接，`jekyll-relative-links` 会转换到网站页面。
-指向仓库源码、配置和根目录 README 的链接使用 GitHub 地址，因为这些文件不在 `/docs` 的网站发布范围内。
+## 日常更新
 
-当前使用 Just the Docs `v0.12.0`，主题版本固定在 `remote_theme` 中。网站提供分组导航、搜索、代码复制和 Mermaid 流程图；图片写法见[编写文档与添加图片](docs-authoring.md)。
+中文源文件在 `docs/*.md`，英文在 `docs/en/*.md`，图片共用 `docs/assets/images/`。
+`main` 上的文档、构建脚本或工作流改动自动部署；PR 只构建，不发布。
+新增翻译和更新原文时见[文档维护指南](docs-authoring.md)。
 
-## 仓库改名后
+Just the Docs 固定为 `v0.12.0`。共同设置在 `docs/_config.yml`；语言配置与编辑链接
+由 `scripts/prepare_docs.py` 生成。构建依赖在 `docs/Gemfile`，需要 Ruby 3.3 和 Python 3。
 
-在 GitHub 的 Settings → General 修改仓库名后，同步更新：
+## 本地构建
 
-- `docs/_config.yml` 的 `baseurl`、`repository`、`aux_links` 和 `gh_edit_repository`。
-- 文档中指向仓库源码、Pages 设置和网站的 GitHub / `github.io` 链接。
-- 本地远程地址：`git remote set-url origin https://github.com/Chal1ce/新仓库名.git`。
+以下构建命令不调用 OCR 或模型：
 
-本仓库名称为 `FinFlow`，`baseurl` 是 `/FinFlow`，默认网站地址为 `https://chal1ce.github.io/FinFlow/`。仓库名和路径大小写保持一致。
-页面内部的相对 Markdown 和图片路径继续有效。
+```sh
+BUNDLE_GEMFILE=docs/Gemfile bundle install
+python3 scripts/prepare_docs.py
+BUNDLE_GEMFILE=docs/Gemfile bundle exec jekyll build --source _build/docs-source/zh --destination _site/zh --config _build/docs-source/zh/_config.yml,_build/docs-source/zh/_config.language.yml
+BUNDLE_GEMFILE=docs/Gemfile bundle exec jekyll build --source _build/docs-source/en --destination _site/en --config _build/docs-source/en/_config.yml,_build/docs-source/en/_config.language.yml
+python3 scripts/prepare_docs.py --finalize
+```
 
-## 发布失败时检查
+输出为 `_site/`，生成文件不会提交。主题首次获取、依赖安装和 Mermaid 渲染需要联网。
 
-- 确认发布来源为 `main` + `/docs`，而不是仓库根目录。
-- 在 Actions 中打开失败的 `pages build and deployment`，查看出错步骤。
-- 若 Pages 设置提示套餐或权限限制，按界面提示处理；GitHub Free 支持公开仓库的 Pages。
-- 若刚保存后仍是 404，先确认部署任务已经成功，而不是只看到构建成功。
+## 仓库改名或自定义域名
 
-本仓库提交配置不等于启用 Pages。首次启用需要仓库管理员或维护者在 Settings 中设置发布来源。
+默认地址固定为 `https://chal1ce.github.io/FinFlow/`。改名时同步修改脚本默认 `--baseurl`、
+`docs/_config.yml` 的 `url` 和仓库链接，以及 README、文档的 GitHub / Pages 链接。
+自定义域名需修改 `url`，在工作流两处脚本命令传 `--baseurl ''`，并配置 Pages 域名。
+
+## 发布失败排查
+
+- 确认 Pages Source 为 **GitHub Actions**，工作流已推送到 `main`。
+- 在 **Documentation** 中区分构建失败与部署失败，查看失败步骤日志。
+- 构建失败常见于 front matter、主题下载、依赖安装；新翻译还需登记原文版本。
+- 部署失败时检查 Pages 是否启用、Actions 权限及 `github-pages` 环境限制。
+- 404 时先确认 `deploy` 已成功；路径 `FinFlow` 大小写需要一致。
+
+提交工作流不等于网站已经发布。首次部署结果以 Actions 和 Pages 设置为准。

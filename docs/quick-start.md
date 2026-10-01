@@ -43,6 +43,8 @@ python -m workflow.flywheel_cli run
 python -m workflow.flywheel_cli status
 ```
 
+配置报错时可参考[本机环境检查记录](environment-check.md)，包含实际预检与启动失败截图、缺项说明和补齐步骤。
+
 ## 4. 自动运行
 
 先完成少量真实运行，抽查图表与候选质量，再按[每日定时](data-flywheel.md#6-每日定时)安装 cron / launchd。

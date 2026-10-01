@@ -20,6 +20,10 @@ ENV/
 
 # Build and packaging artifacts
 build/
+_build/
+_site/
+.bundle/
+docs/.jekyll-cache/
 dist/
 *.egg-info/
 

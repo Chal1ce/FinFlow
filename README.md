@@ -1,5 +1,9 @@
 # FinFlow
 
+**中文** · [English](README.en.md)
+
+[中文文档网站](https://chal1ce.github.io/FinFlow/zh/) · [English documentation](https://chal1ce.github.io/FinFlow/en/)
+
 把金融文档转成可追溯的预训练数据。
 
 项目自动采集财报、研报与相关论文，串接 OCR、文本与图表治理、多模态描述、

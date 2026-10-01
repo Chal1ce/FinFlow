@@ -14,3 +14,21 @@
   color: #5c6677;
   font-size: 0.875rem;
 }
+
+.language-switch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.language-switch [aria-current] {
+  font-weight: 600;
+}
+
+.translation-status {
+  color: #5c6677;
+  font-size: 0.75rem;
+}
