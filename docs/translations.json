@@ -1,0 +1,38 @@
+{
+  "data-flywheel": {
+    "source_sha256": "0fc96c0cc99c9d58adfb996aac882b4a5b491d4354acb47b55d15812c7ea4b30",
+    "coverage": "summary"
+  },
+  "docs-authoring": {
+    "source_sha256": "fd5261d00718de45fd6c8bb882bcdcf5531b60c1ebf70a0731781dfa38bcec82",
+    "coverage": "full"
+  },
+  "environment-check": {
+    "source_sha256": "de80073ba0cdb36fdb5c341e7b70cd9a2d22cb1de30e4633627ca6368c3f5888",
+    "coverage": "summary"
+  },
+  "github-pages": {
+    "source_sha256": "62f905c69552563e359ba0a851c36bb5119c3776ee6da8fb2239a2c4353b43bc",
+    "coverage": "full"
+  },
+  "index": {
+    "source_sha256": "f14c3da48c801f2c098b3f6696058b9f85ca2a78de4cdf6995822682c5141469",
+    "coverage": "summary"
+  },
+  "pretraining": {
+    "source_sha256": "94bdbe1a7e3313b19c0f1de159caa98ca1b1630c6987265f0ed95651609cad80",
+    "coverage": "full"
+  },
+  "quick-start": {
+    "source_sha256": "ba5a6a66c9058f661aa16b804726939ae741d1ba78069c77a98e0369702cb2a0",
+    "coverage": "full"
+  },
+  "reference": {
+    "source_sha256": "a5b62cb8975cc2c2fb889d0c2f5f2bb861900c9ada194b470636a347a46b0d98",
+    "coverage": "summary"
+  },
+  "training-data": {
+    "source_sha256": "549ad9e66212594a08c58c853d083f7abcf23505d1a8a77aedc383fec5ced2d8",
+    "coverage": "full"
+  }
+}

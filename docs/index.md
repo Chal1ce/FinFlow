@@ -13,6 +13,9 @@ permalink: /
 
 首次使用从[快速开始](quick-start.md)进入；左侧导航按数据处理、训练数据、运维和参考分组。
 
+网站提供中文与英文版本，可在顶部切换。尚未翻译的页面会切换到英文首页；
+英文版目前覆盖主要使用流程，完整参考教程仍可查阅中文版。
+
 [返回项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
 本文档随仓库代码维护。所有命令均在项目根目录执行；真实连接与凭据填写在本机 `.env`，
@@ -60,6 +63,7 @@ permalink: /
 
 - [本地运行与运维](local_operations.md)：观察状态、校验交付、人工复核、备份与恢复。
 - [运行日志与排错](logging.md)：日志格式、级别与轮转配置。
+- [本机环境检查记录](environment-check.md)：实际配置检查截图、启动结果与缺项处理。
 - [数据飞轮计划](data-flywheel-plan.md)：设计背景、实施范围与阶段划分。
 - [编写文档与添加图片](docs-authoring.md)：图片路径、导航和页面写法。
 - [GitHub Pages 发布说明](github-pages.md)：首次启用、日常更新和部署排错。
