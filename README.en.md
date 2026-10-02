@@ -18,7 +18,7 @@ pretraining (CPT).
 - PaddleOCR integration, cleaning, metadata normalization, and quality checks.
 - Image/table crops in one asset table, retaining table OCR and visual descriptions.
 - Independent review, target-tokenizer segmentation, and grouped splits.
-- Evidence-grounded SFT: document QA, JSON extraction, table calculations, exact quotations, and independent review.
+- Evidence-grounded SFT: document QA, extraction and calculations; optional visual QA and table transcription with packaged images.
 - Incremental runs, bounded retries, recovery, deduplication, lineage, immutable releases.
 - Feishu, Telegram, Discord, and Slack commands, PDF imports, human visual review, reports, and MCP tools for assistants.
 
@@ -75,7 +75,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Installation and choosing a workflow | [Quick start](docs/en/quick-start.md) |
 | Models, admission, review, retries, lineage, releases | [Daily data flywheel](docs/en/data-flywheel.md) |
 | Messaging apps or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) · [Telegram](docs/en/app-telegram.md) · [Discord](docs/en/app-discord.md) · [Slack](docs/en/app-slack.md) |
-| QA, extraction and calculation SFT from v7 evidence | [SFT generation and resuming](docs/en/sft.md) |
+| Text or visual SFT from v7 evidence | [Text SFT](docs/en/sft.md) · [Visual SFT](docs/en/sft-vision.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
 | Actual missing configuration | [Environment check](docs/en/environment-check.md) |
 | Detailed OCR, acquisition, governance, CLI, operations | [Reference guides; detailed pages in Chinese](docs/en/reference.md) |

@@ -13,9 +13,9 @@ FinFlow generates three types of Chinese text SFT examples from verified, locall
 | `extraction` | Approved original text | JSON field extraction; every value must occur in its evidence quotation |
 | `table_calculation` | Table OCR, surrounding context and original image from an approved visual candidate | Two-operand calculation, recomputed in code and reviewed against the image |
 
-This first version exports **text SFT**: training inputs contain context and questions, not images.
-Original table images are used for review only. It does not generate multimodal training examples,
-preference pairs, retrieval negatives or multi-turn conversations, and does not train a model.
+This guide covers **text SFT**: training inputs contain context and questions, not images.
+Original table images are used for review only. Optional [visual SFT](sft-vision.md) exports real image inputs.
+Preference pairs, retrieval negatives, multi-turn conversations and model training are not implemented.
 Generated image descriptions, translations and rewrites are not treated as new factual evidence.
 
 ## 1. Configure models
@@ -76,7 +76,7 @@ tables and conversations are never silently truncated or split into separate exa
 
 ## 3. Recipe and arithmetic limits
 
-`config/sft.json` enables all three tasks with up to two samples per evidence/task pair:
+`config/sft.json` enables all three text tasks with up to two samples per evidence/task pair:
 
 - `max_jobs`: maximum newly completed generation jobs per invocation; completed cache entries do not count.
 - `max_model_requests`: per-invocation SFT request cap, separate from CPT; cached responses do not count.
@@ -110,14 +110,15 @@ Output directory: `data/training/sft/datasets/<dataset-id>/`.
 
 | File | Contents |
 | --- | --- |
-| `train.jsonl`, `validation.jsonl` | `sample_id` and `messages` for conversation-aware training programs |
+| `train.jsonl`, `validation.jsonl` | Text-only `sample_id` and `messages` for conversation-aware training programs |
+| `train.vision.jsonl`, `validation.vision.jsonl`, `images.jsonl` | Visual exports and image inventory; empty for text-only recipes |
 | `samples.jsonl` | Full examples with task, split, generation/review artifacts, quotations and calculation details |
 | `evidence.jsonl` | Context, source, work identity, chunk/table position and upstream decision |
 | `audit.jsonl` | Review results, deterministic validation failures, exclusions and duplicates |
 | `jobs.jsonl` | Generation jobs and local checkpoint references |
 | `manifest.json`, `checksums.sha256` | Recipe, model identities, input release, counts, status and integrity inventory |
 
-Each training row has three messages: `system`, `user` with evidence/task, and `assistant`.
+Each text training row has three messages: `system`, `user` with evidence/task, and `assistant`.
 `sample_id` is metadata and must not be concatenated into the prompt. These are synthetic examples;
 automated review is not human validation. Inspect samples before training.
 
@@ -138,13 +139,14 @@ and exit code 1; configuration/fatal failures use exit code 2.
 Continue with a **new dataset ID and the same recipe/release** to reuse completed work and process pending jobs.
 
 An existing dataset ID returns its verified historical snapshot; it is never appended to.
+The current engine/export is `sft-v2`: upgrading changes recipe identity, so use a new dataset ID. Existing v1 packages remain unchanged.
 Each new export contains cumulative results for the selected release and recipe, not a daily delta.
 Do not concatenate successive resume snapshots without deduplication.
 Rejected/uncertain results are not regenerated indefinitely. Change a prompt version or model to
 create a new recipe while keeping old audit records. There is no SFT manual-approval command yet;
 upstream human candidate approval does not approve derived SFT examples.
 
-Splits are persisted before generation and inherit existing CPT assignments. Identical context and
+Splits are persisted before generation and inherit existing CPT assignments. Identical context, identical image bytes and
 same-work derivatives share a split. New CPT builds also respect SFT assignments. Historical conflicts
 exclude affected SFT evidence with `split_conflict`. There are only train/validation splits, no independent
 test set. Validation may be used during recipe development and is not a final blind benchmark.

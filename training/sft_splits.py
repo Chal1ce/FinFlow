@@ -8,6 +8,15 @@ from core.ids import stable_uid
 from training.flywheel_corpus import read_jsonl, verify
 
 
+def split_keys(item):
+    keys = [("sft-work-split", item["work_uid"])]
+    if item["text"].strip():
+        keys.append(("sft-content-split", item["content_hash"]))
+    if item.get("image_sha256"):
+        keys.append(("sft-image-split", item["image_sha256"]))
+    return keys
+
+
 def assign_splits(store, evidence, fraction, root):
     parent, hashes = {}, {}
 
@@ -19,12 +28,19 @@ def assign_splits(store, evidence, fraction, root):
         return work
 
     for item in evidence:
-        work, key = item["work_uid"], item["content_hash"]
+        work = item["work_uid"]
         find(work)
+        for key in split_keys(item)[1:]:
+            if key in hashes:
+                a, b = find(work), find(hashes[key])
+                parent[max(a, b)] = min(a, b)
+            hashes[key] = work
+    # A copied image can connect selected evidence to another historical CPT work.
+    for row in store.connection.execute("SELECT work_uid,sha256 FROM visual_asset WHERE status='success'"):
+        key = ("sft-image-split", row["sha256"])
         if key in hashes:
-            a, b = find(work), find(hashes[key])
+            a, b = find(row["work_uid"]), find(hashes[key])
             parent[max(a, b)] = min(a, b)
-        hashes[key] = work
     constraints = {}
     for row in store.connection.execute("SELECT metadata_json FROM training_origin"):
         origin = json.loads(row[0])
@@ -41,9 +57,13 @@ def assign_splits(store, evidence, fraction, root):
             for origin in read_jsonl(directory / "provenance.jsonl"):
                 if origin["work_uid"] in parent:
                     constraints.setdefault(find(origin["work_uid"]), set()).add(origin["split"])
+    for work in parent:
+        previous = store.get("sft-work-split", work)
+        if previous:
+            constraints.setdefault(find(work), set()).add(previous["split"])
     for item in evidence:
         group = find(item["work_uid"])
-        for kind, key in (("sft-work-split", item["work_uid"]), ("sft-content-split", item["content_hash"])):
+        for kind, key in split_keys(item):
             previous = store.get(kind, key)
             if previous:
                 constraints.setdefault(group, set()).add(previous["split"])
@@ -67,6 +87,10 @@ def assign_splits(store, evidence, fraction, root):
         item["split"] = split
         if split is not None:
             # Caller holds the shared pipeline lock. Persist before any model call.
-            store.put("sft-work-split", item["work_uid"], {"split": split, "work_uid": item["work_uid"]})
-            store.put("sft-content-split", item["content_hash"], {"split": split, "work_uid": item["work_uid"]})
+            for kind, key in split_keys(item):
+                store.put(kind, key, {"split": split, "work_uid": item["work_uid"]})
+    for work in parent:
+        split = assignments[find(work)]
+        if split is not None:
+            store.put("sft-work-split", work, {"split": split, "work_uid": work})
     return evidence

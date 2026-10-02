@@ -29,3 +29,9 @@ Approved v7 original text and tables can also generate document QA, structured e
 and table-calculation examples. Outputs retain complete messages, evidence, review and lineage
 without CPT-style text segmentation. See [SFT data generation](sft.md) for the standalone CLI,
 daily integration, resumable caches and split limitations.
+
+## Visual SFT
+
+Optional `config/sft-vision.json` supports visual QA and table-image-to-JSON transcription.
+Exports package original images, typed messages and visual evidence metadata, with separate text/vision training files.
+See [Visual SFT](sft-vision.md).

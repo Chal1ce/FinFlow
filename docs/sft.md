@@ -13,8 +13,8 @@ FinFlow 可从本机已校验的 v7 证据发布包生成三类中文文本 SFT�
 | `extraction` | 审核通过的原文片段 | JSON 字段抽取；字段值必须直接出现在引用证据中 |
 | `table_calculation` | 已通过图表候选审核的表格 OCR、上下文与原图 | 两个操作数的计算；程序重算，审核模型对照原图核对取数与单位 |
 
-当前是第一阶段的**文本 SFT**：训练输入包含材料和问题，不包含图片；表格原图仅用于审核。
-不生成多模态训练样本、偏好对、检索负例或多轮对话，也不启动模型训练。
+本页介绍**文本 SFT**：训练输入包含材料和问题，不包含图片；表格原图仅用于审核。
+另有可选的[图表多模态 SFT](sft-vision.md)，训练样本包含原图。偏好对、检索负例、多轮对话和模型训练尚未实现。
 不把图表模型描述、翻译或改写当作新的事实依据。
 
 ## 1. 配置模型
@@ -75,7 +75,7 @@ python -m training.sft_cli \
 
 ## 3. 配方与计算范围
 
-`config/sft.json` 默认启用三种任务，每个证据／任务最多生成两条样本：
+`config/sft.json` 默认启用三种文本任务，每个证据／任务最多生成两条样本：
 
 - `max_jobs`：每次最多完成的新生成任务数，已完成缓存不占名额。
 - `max_model_requests`：单次 SFT 调用次数上限；命中缓存不计数，与 CPT 限额独立。
@@ -107,14 +107,15 @@ python -m training.sft_cli \
 
 | 文件 | 内容 |
 | --- | --- |
-| `train.jsonl`、`validation.jsonl` | `sample_id` 和 `messages`，可交给支持对话格式的训练程序 |
+| `train.jsonl`、`validation.jsonl` | 纯文本 `sample_id` 和 `messages`，可交给支持对话格式的训练程序 |
+| `train.vision.jsonl`、`validation.vision.jsonl`、`images.jsonl` | 多模态导出及图片索引；仅文本配方时为空 |
 | `samples.jsonl` | 完整样本：任务、划分、生成／审核工件、引文、计算依据 |
 | `evidence.jsonl` | 使用的材料、来源、work ID、chunk／表格位置、上游决定 |
 | `audit.jsonl` | 审核结果、确定性校验失败、排除与重复记录 |
 | `jobs.jsonl` | 可追溯的生成任务与本机 checkpoint 索引 |
 | `manifest.json`、`checksums.sha256` | 配方、模型身份、输入发布包、数量、状态、完整性摘要 |
 
-训练文件中每条样本为三条消息：`system`、含材料和任务的 `user`、`assistant`。
+文本训练文件中每条样本为三条消息：`system`、含材料和任务的 `user`、`assistant`。
 `sample_id` 是元数据，不应拼到提示词中。数据是合成样本，自动审核不等于人工验证；上线训练前仍需抽查。
 
 ```sh
@@ -132,11 +133,12 @@ python -m workflow.flywheel_cli --data-root data trace --sample-id YOUR_SFT_SAMP
 使用**新 dataset ID、相同配方和发布包**继续，会复用已有结果并处理剩余任务。
 
 同一个 dataset ID 已存在时，只校验并返回历史快照，不向其中追加。
+当前引擎／导出版本为 `sft-v2`，升级后配方身份改变，应使用新的 dataset ID；旧 v1 数据保留。
 每个新导出是选定发布包与配方的累计结果，不要把多次续作快照直接拼接，否则会重复训练。
 拒绝／待复核结果不会自动反复生成；调整提示词版本或模型后生成新配方，保留旧审计记录。
 当前没有 SFT 人工批准命令，上游候选人工复核也不能直接批准 SFT 样本。
 
-划分在生成前持久化：沿用已有 CPT 的 work 划分；完全相同上下文与同一 work 的派生内容保持一致。
+划分在生成前持久化：沿用已有 CPT 的 work 划分；完全相同上下文、相同图片字节与同一 work 的派生内容保持一致。
 新的 CPT 构建也会读取该划分。历史数据冲突时排除相关 SFT 证据，记录 `split_conflict`。
 本版只有 train/validation，不创建独立测试集；验证集可能参与配方调优，不能当作最终盲测。
 该策略不自动识别所有语义近重复、跨公司转载或未建立身份关联的修订文档。

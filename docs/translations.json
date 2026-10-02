@@ -32,7 +32,7 @@
     "coverage": "full"
   },
   "index": {
-    "source_sha256": "89545a24fd0b53c8c6d480cfb01da16d3d617893a702ce2766ecd01e258de1f3",
+    "source_sha256": "e2b76abacf288e14028178a36947f7565ceb8419dba5701b7fcef48ee01f762a",
     "coverage": "summary"
   },
   "pretraining": {
@@ -48,11 +48,15 @@
     "coverage": "summary"
   },
   "sft": {
-    "source_sha256": "f406953f889f0f625dfa6c0a856716b093f390fc3f30c3bf22de061136b491c7",
+    "source_sha256": "67ea788b70668156e3200776fa5dacaf5a2f6183da0ec6cf7597ce7159b91215",
+    "coverage": "full"
+  },
+  "sft-vision": {
+    "source_sha256": "1c6c9fa151b0174c9d540487fc0ebb3a5e37714137d338bd546233faec39a615",
     "coverage": "full"
   },
   "training-data": {
-    "source_sha256": "10d12f970f819f23a4051a9078ef66ab0977070a5c2ae9d42905480e637128ab",
+    "source_sha256": "5d59aefae2c5e693e30c07bfdc3258dda9e8226fce3d780daf55d8817c5b4d8f",
     "coverage": "full"
   }
 }

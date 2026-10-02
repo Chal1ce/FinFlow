@@ -10,7 +10,22 @@ from urllib.parse import urlsplit
 from config import load_config
 from workflow.flywheel_config import ModelRole, digest
 
-TASKS = {"document_qa", "extraction", "table_calculation"}
+TEXT_TASKS = {"document_qa", "extraction", "table_calculation"}
+VISION_TASKS = {"visual_qa", "table_structure"}
+TASKS = TEXT_TASKS | VISION_TASKS
+
+
+def task_supports(task, kind):
+    return (
+        kind
+        in {
+            "document_qa": {"text"},
+            "extraction": {"text"},
+            "table_calculation": {"table"},
+            "visual_qa": {"image", "table"},
+            "table_structure": {"table"},
+        }[task]
+    )
 
 
 class SFTConfig:
@@ -18,17 +33,27 @@ class SFTConfig:
         load_config()  # Load .env with the project's parser, never through a shell.
         self.path = Path(path).resolve()
         self.policy = json.loads(self.path.read_text(encoding="utf-8"))
-        self.roles = {role: ModelRole.load(role) for role in ("sft_generate", "sft_review")}
+        if not isinstance(self.policy, dict):
+            raise ValueError("SFT recipe must be an object")
+        tasks = self.policy.get("tasks", [])
+        if not isinstance(tasks, list) or any(not isinstance(t, str) for t in tasks):
+            raise ValueError("SFT tasks must be a list of strings")
+        roles = []
+        if TEXT_TASKS.intersection(tasks):
+            roles.extend(("sft_generate", "sft_review"))
+        if VISION_TASKS.intersection(tasks):
+            roles.extend(("sft_vision_generate", "sft_vision_review"))
+        self.roles = {role: ModelRole.load(role) for role in roles}
         self.model_limit = self.policy.get("max_model_requests", 40)
-        self.version = digest({"policy": self.policy, "models": {k: v.identity() for k, v in self.roles.items()}, "engine": "sft-v1"})
+        self.version = digest({"policy": self.policy, "models": {k: v.identity() for k, v in self.roles.items()}, "engine": "sft-v2"})
 
     def preflight(self):
         errors = []
         if self.policy.get("schema_version") != "sft-recipe-v1":
             errors.append("schema_version must be sft-recipe-v1")
-        tasks = self.policy.get("tasks")
+        tasks = self.policy.get("tasks", [])
         if not isinstance(tasks, list) or not tasks or any(not isinstance(t, str) or t not in TASKS for t in tasks):
-            errors.append("tasks must contain document_qa, extraction and/or table_calculation")
+            errors.append("tasks must be a nonempty list selected from: " + ", ".join(sorted(TASKS)))
         elif len(set(tasks)) != len(tasks):
             errors.append("tasks must not contain duplicates")
         for name, default, upper in (
@@ -38,6 +63,11 @@ class SFTConfig:
             ("max_evidence_chars", 12000, 100000),
             ("max_answer_chars", 6000, 100000),
             ("max_question_chars", 2000, 10000),
+            ("max_image_bytes", 10485760, 104857600),
+            ("max_image_pixels", 40000000, 100000000),
+            ("max_table_rows", 50, 500),
+            ("max_table_columns", 20, 100),
+            ("max_table_cells", 500, 10000),
         ):
             value = self.policy.get(name, default)
             if type(value) is not int or not 1 <= value <= upper:
@@ -72,4 +102,6 @@ class SFTConfig:
             "recipe_uid": self.version,
             "tasks": tasks,
             "network_requested": False,
+            "image_roles_required": [role for role in self.roles if "vision" in role]
+            + (["sft_review"] if "table_calculation" in tasks else []),
         }

@@ -17,6 +17,9 @@ from processing.visual_description import ModelBudgetExceeded, RoleClient
 from storage.state_store import utc_now
 from training.flywheel_corpus import checksums, jsonl, read_jsonl, verify
 from training.pretrain import redact_direct_contacts
+from training import sft_vision
+from training.sft_config import VISION_TASKS, task_supports
+from training.sft_export import export_files, inspect_image, sample_hash, verify_dataset
 from training.sft_recipes import generation_prompt, normalize_sample, parse_object, review_decision, review_prompt
 from training.sft_splits import assign_splits
 from workflow.flywheel_config import digest
@@ -64,26 +67,45 @@ class SFTBuilder:
             parents = [row["artifact_uid"], decision["artifact_uid"]]
             asset = record.get("asset") or {}
             image_path = None
+            kind = asset.get("asset_kind") if row["method"] == "visual" else "text"
+            if not any(task_supports(task, kind) for task in self.config.policy["tasks"]):
+                continue
+            image_info = None
             if row["method"] == "visual":
-                if asset.get("asset_kind") != "table" or not asset.get("table_artifact_uid"):
-                    continue  # Text SFT never treats a generated image description as ground truth.
-                table_path = self._artifact_file(release_path, artifacts, asset["table_artifact_uid"])
-                table = json.loads(table_path.read_text(encoding="utf-8"))
-                text = table["markdown"]
-                if not text.strip():
-                    excluded.append({"candidate_uid": uid, "status": "excluded", "reason": "empty_table_representation"})
+                # Generated descriptions are never substituted for original visual evidence.
+                if kind not in {"image", "table"} or asset.get("status") != "success":
+                    excluded.append({"candidate_uid": uid, "status": "excluded", "reason": "visual_asset_not_ready"})
                     continue
-                # Include the OCR context for units/captions, not the generated description.
-                text = "表格 OCR：\n" + text + "\n邻近 OCR 上下文：\n" + asset.get("context", "")
                 image_path = self._artifact_file(release_path, artifacts, asset["artifact_uid"])
-                parents.extend([asset["table_artifact_uid"], asset["artifact_uid"], asset["context_artifact_uid"]])
-                self._artifact_file(release_path, artifacts, asset["context_artifact_uid"])
-                if sha256(image_path) != asset["sha256"]:
-                    raise ValueError("SFT table image checksum mismatch")
+                context_path = self._artifact_file(release_path, artifacts, asset["context_artifact_uid"])
+                context_record = json.loads(context_path.read_text(encoding="utf-8"))
+                parents.extend([asset["artifact_uid"], asset["context_artifact_uid"]])
+                try:
+                    image_info = inspect_image(image_path, asset["sha256"], self.config.policy)
+                except (ValueError, OSError) as exc:
+                    excluded.append(
+                        {
+                            "candidate_uid": uid,
+                            "status": "needs_review",
+                            "reason": "image_validation_failed",
+                            "error_type": type(exc).__name__,
+                        }
+                    )
+                    continue
+                if kind == "table":
+                    if not asset.get("table_artifact_uid"):
+                        excluded.append({"candidate_uid": uid, "status": "excluded", "reason": "missing_table_representation"})
+                        continue
+                    table_path = self._artifact_file(release_path, artifacts, asset["table_artifact_uid"])
+                    table = json.loads(table_path.read_text(encoding="utf-8"))
+                    text = "表格 OCR：\n" + table["markdown"] + "\n邻近 OCR 上下文：\n" + context_record.get("context", "")
+                    parents.append(asset["table_artifact_uid"])
+                else:
+                    text = context_record.get("context", "")
             else:
                 text = record["text"]
             text, redactions = redact_direct_contacts(text)
-            if not text.strip() or len(text) > self.config.policy.get("max_evidence_chars", 12000):
+            if (not text.strip() and not image_path) or len(text) > self.config.policy.get("max_evidence_chars", 12000):
                 excluded.append({"candidate_uid": uid, "status": "excluded", "reason": "evidence_empty_or_over_character_limit"})
                 continue
             evidence.append(
@@ -91,7 +113,7 @@ class SFTBuilder:
                     "evidence_uid": stable_uid("sft-evidence-v1", uid, digest(text), decision["artifact_uid"]),
                     "candidate_uid": uid,
                     "work_uid": record["work_uid"],
-                    "kind": "table" if image_path else "text",
+                    "kind": kind,
                     "text": text,
                     "content_hash": hashlib.sha256(text.encode()).hexdigest(),
                     "source": record["source"],
@@ -104,6 +126,8 @@ class SFTBuilder:
                     "redaction": redactions,
                     "image_path": self.context.relative_path(image_path) if image_path else None,
                     "image_sha256": asset.get("sha256") if image_path else None,
+                    "image_artifact_uid": asset.get("artifact_uid") if image_path else None,
+                    "image_info": image_info,
                     "upstream_decision_artifact_uid": decision["artifact_uid"],
                 }
             )
@@ -146,13 +170,17 @@ class SFTBuilder:
                 if not record or sha256(safe_path(self.root, record[0])) != record[1]:
                     raise ValueError("SFT cached artifact checksum mismatch")
             return result
-        prompt = generation_prompt(task, evidence, self.config)
-        response, generated_artifact = self._model("sft_generate", prompt, evidence["parents"])
+        vision = task in VISION_TASKS
+        prompt = (sft_vision.generation_prompt if vision else generation_prompt)(task, evidence, self.config)
+        response, generated_artifact = self._model(
+            "sft_vision_generate" if vision else "sft_generate", prompt, evidence["parents"], evidence=evidence if vision else None
+        )
         samples, audit = [], []
         parents = [*evidence["parents"], generated_artifact]
         try:
             raw = parse_object(response).get("samples")
-            if not isinstance(raw, list) or len(raw) > self.config.policy.get("samples_per_task", 2):
+            limit = 1 if task == "table_structure" else self.config.policy.get("samples_per_task", 2)
+            if not isinstance(raw, list) or len(raw) > limit:
                 raise ValueError("invalid_sample_count")
         except (ValueError, KeyError, IndexError, TypeError):
             raw = []
@@ -162,29 +190,30 @@ class SFTBuilder:
         seen = set()
         for index, item in enumerate(raw):
             try:
-                sample = normalize_sample(task, item, evidence, self.config)
+                sample = (sft_vision.normalize_sample if vision else normalize_sample)(task, item, evidence, self.config)
             except (ValueError, KeyError, TypeError):
                 audit.append({"index": index, "status": "rejected", "reason": "deterministic_validation_failed"})
                 continue
-            content_hash = digest(sample["messages"])
+            content_hash = sample_hash(sample)
             if content_hash in seen:
                 audit.append({"index": index, "status": "excluded", "reason": "duplicate_generated_sample"})
                 continue
             seen.add(content_hash)
-            prompt = review_prompt(sample, evidence, self.config)
-            reviewed, review_artifact = self._model("sft_review", prompt, parents, evidence=evidence)
+            prompt = sft_vision.review_prompt(sample, self.config) if vision else review_prompt(sample, evidence, self.config)
+            reviewed, review_artifact = self._model("sft_vision_review" if vision else "sft_review", prompt, parents, evidence=evidence)
             parents.append(review_artifact)
             try:
-                decision = review_decision(reviewed)
+                decision = sft_vision.review_decision(reviewed, task) if vision else review_decision(reviewed)
             except (ValueError, KeyError, IndexError, TypeError):
                 decision = {"status": "needs_review", "reasons": ["invalid_review_response"]}
             audit.append({"index": index, **decision, "artifact_uid": review_artifact})
             if decision["status"] != "accepted":
                 continue
-            sample_uid = "sft-" + stable_uid(self.config.version, job_uid, digest(sample["messages"]))
+            sample_uid = "sft-" + stable_uid(self.config.version, job_uid, sample_hash(sample))
             sample = {
                 **sample,
-                "schema_version": "financial-sft-sample-v1",
+                "schema_version": "financial-sft-sample-v2",
+                "modality": "vision" if vision else "text",
                 "sample_id": sample_uid,
                 "synthetic": True,
                 "split": evidence["split"],
@@ -193,7 +222,7 @@ class SFTBuilder:
                 "work_uid": evidence["work_uid"],
                 "candidate_uid": evidence["candidate_uid"],
                 "decision": decision,
-                "content_hash": digest(sample["messages"]),
+                "content_hash": sample_hash(sample),
                 "generation_artifact_uid": generated_artifact,
                 "review_artifact_uid": review_artifact,
             }
@@ -210,7 +239,9 @@ class SFTBuilder:
         result = {"job_uid": job_uid, "task": task, "evidence_uid": evidence["evidence_uid"], "samples": samples, "audit": audit}
         path = self.root / "training" / "sft" / "jobs" / f"{job_uid}.json"
         write_json(path, result)
-        artifact = register_file(self.store, self.context, path, "sft-job", tuple(parents), identity=job_uid)
+        artifact = register_file(
+            self.store, self.context, path, "sft-job", tuple([*parents, *[sample["artifact_uid"] for sample in samples]]), identity=job_uid
+        )
         self.store.put("sft-job", job_uid, {"path": self.context.relative_path(path), "sha256": sha256(path), "artifact_uid": artifact})
         return result
 
@@ -234,7 +265,7 @@ class SFTBuilder:
         release_record = {"path": self.context.relative_path(release_path), "manifest_sha256": sha256(release_path / "manifest.json")}
         destination = safe_path(self.root / "training" / "sft" / "datasets", dataset_id)
         if destination.exists():
-            previous = verify(destination)
+            previous = verify_dataset(destination)
             if previous.get("recipe_uid") != self.config.version or previous.get("release") != release_record:
                 raise ValueError("dataset_id already belongs to a different SFT recipe/release")
             self._index(destination, previous)
@@ -249,7 +280,7 @@ class SFTBuilder:
                 audit.append({"evidence_uid": item["evidence_uid"], "status": "needs_review", "reason": "split_conflict"})
                 continue
             for task in self.config.policy["tasks"]:
-                if (task == "table_calculation") != (item["kind"] == "table"):
+                if not task_supports(task, item["kind"]):
                     continue
                 job_uid = stable_uid("sft-job-v1", self.config.version, item["evidence_uid"], item["split"], task)
                 cached = self.store.get("sft-job", job_uid)
@@ -292,7 +323,7 @@ class SFTBuilder:
         counts = Counter(s["task"] for s in samples.values())
         status = "partial" if pending or errors or any(x["status"] == "needs_review" for x in audit) else "success"
         manifest = {
-            "schema_version": "financial-sft-dataset-v1",
+            "schema_version": "financial-sft-dataset-v2",
             "dataset_id": dataset_id,
             "created_at": utc_now(),
             "status": status,
@@ -309,9 +340,10 @@ class SFTBuilder:
             "errors": errors,
             "model_requests": self.client.requests,
             "model_usage": self.client.usage,
-            "split_policy": "persistent-logical-work-and-exact-context-v1-inherits-cpt",
+            "split_policy": "persistent-work-context-image-v2-inherits-cpt",
             "scope": "snapshot-of-current-accepted-results-for-selected-release-and-recipe",
-            "training_format": "messages; no tokenizer, chat template, packing or truncation applied",
+            "training_format": "separate text/vision messages; no tokenizer, chat template, packing or truncation applied",
+            "export_files": {"text": ["train.jsonl", "validation.jsonl"], "vision": ["train.vision.jsonl", "validation.vision.jsonl"]},
             "audit_counts": dict(Counter(a["status"] for a in audit)),
         }
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -319,17 +351,13 @@ class SFTBuilder:
         try:
             rows = sorted(samples.values(), key=lambda s: s["sample_id"])
             jsonl(staging / "samples.jsonl", rows)
-            for split in ("train", "validation"):
-                jsonl(
-                    staging / f"{split}.jsonl",
-                    ({"sample_id": s["sample_id"], "messages": s["messages"]} for s in rows if s["split"] == split),
-                )
+            manifest.update(export_files(self.root, staging, rows, evidence))
             jsonl(staging / "evidence.jsonl", evidence)
             jsonl(staging / "audit.jsonl", audit)
             jsonl(staging / "jobs.jsonl", jobs)
             write_json(staging / "manifest.json", manifest)
             checksums(staging)
-            verify(staging)
+            verify_dataset(staging)
             os.replace(staging, destination)
         finally:
             if staging.exists():
@@ -341,6 +369,8 @@ class SFTBuilder:
             "path": str(destination),
             "samples": len(samples),
             "tasks": dict(counts),
+            "modalities": manifest["modalities"],
+            "images": manifest["images"],
             "pending_jobs": pending,
             "errors": errors,
             "model_requests": self.client.requests,
