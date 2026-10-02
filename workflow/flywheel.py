@@ -29,6 +29,10 @@ from training.flywheel_corpus import FlywheelCorpusBuilder, TokenSplitter
 from workflow.flywheel_config import digest
 
 
+class PipelineBusyError(RuntimeError):
+    """Another process currently owns the data pipeline lock."""
+
+
 class DailyLock:
     """Kernel lock survives long runs and is released automatically on process death."""
 
@@ -43,7 +47,7 @@ class DailyLock:
             fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             self.handle.close()
-            raise RuntimeError("another daily pipeline is running") from None
+            raise PipelineBusyError("another daily pipeline is running") from None
         return self
 
     def __exit__(self, *_):
@@ -404,8 +408,28 @@ class DailyFlywheel:
         return {"ocr_artifact_uid": ocr_artifact}
 
     def _backfill(self):
+        # Application imports retain every message origin, even when several
+        # messages share one PDF/OCR directory. Re-enqueue through their original
+        # PDF artifact when a recipe changes instead of creating an orphan root
+        # from the legacy, one-record-per-asset manifest below.
+        application_documents = set()
+        for document in self.store.records("document"):
+            source = document.get("source", {})
+            if source.get("source_name") not in {"app-feishu", "app-mcp", "app-local"}:
+                continue
+            if not document.get("source_record_uid") or not document.get("pdf_artifact_uid"):
+                raise ValueError("application document is missing its source lineage")
+            application_documents.add((document["work_uid"], document["asset_uid"]))
+            self.store.enqueue(
+                "ocr",
+                stable_uid(document["work_uid"], document["asset_uid"], document["source_record_uid"]),
+                document,
+                version=self.config.version,
+            )
         # Existing OCR is registered and processed; no OCR call is needed.
         for document in discover_documents(self.root):
+            if (document["work_uid"], document["asset_uid"]) in application_documents:
+                continue
             manifest = document["manifest_record"]
             raw_path = manifest.get("raw_path")
             result = Path(document["parsed_dir"]) / "result.json"

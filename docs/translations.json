@@ -1,4 +1,8 @@
 {
+  "app-integrations": {
+    "source_sha256": "2b69a976b9047c6d8e87580d24e767d3ff45d6daf9eff91b202de59ca3def77e",
+    "coverage": "full"
+  },
   "data-flywheel": {
     "source_sha256": "0fc96c0cc99c9d58adfb996aac882b4a5b491d4354acb47b55d15812c7ea4b30",
     "coverage": "summary"
@@ -16,7 +20,7 @@
     "coverage": "full"
   },
   "index": {
-    "source_sha256": "f14c3da48c801f2c098b3f6696058b9f85ca2a78de4cdf6995822682c5141469",
+    "source_sha256": "2c6f8bd0e9cca60f24fde2cbceca58296d1825e038bc8f7c0f21b3735b85a5d4",
     "coverage": "summary"
   },
   "pretraining": {

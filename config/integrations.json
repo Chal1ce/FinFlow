@@ -1,0 +1,18 @@
+{
+  "schema_version": "app-integrations-v1",
+  "timezone": "Asia/Shanghai",
+  "max_attachment_mb": 32,
+  "max_pending_jobs": 100,
+  "poll_seconds": 2,
+  "review_ttl_seconds": 3600,
+  "mcp": {
+    "allow_mutations": false,
+    "import_roots": []
+  },
+  "feishu": {
+    "enabled": false,
+    "users": {},
+    "allowed_group_chats": [],
+    "notification_chats": []
+  }
+}
