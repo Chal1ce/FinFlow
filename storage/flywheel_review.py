@@ -71,6 +71,10 @@ def trace(store, *, sample_uid=None, artifact_uid=None, candidate_uid=None):
         for origin in origins:
             roots.add(origin["artifact_uid"])
             roots.add(origin["decision"]["artifact_uid"])
+        sft_sample = store.get("sft-sample", sample_uid)
+        if sft_sample:
+            origins.append(sft_sample)
+            roots.add(sft_sample["artifact_uid"])
     elif candidate_uid:
         row = store.connection.execute(
             "SELECT artifact_uid,decision_json FROM training_candidate WHERE candidate_uid=?", (candidate_uid,)

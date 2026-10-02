@@ -16,6 +16,7 @@
   "retry_seconds": 300,
   "validation_fraction": 0.05,
   "source_policy": {},
+  "sft": {"enabled": false, "config": "config/sft.json"},
   "require_ocr_pass": true,
   "review_prompt_version": "evidence-review-v1",
   "visual_prompt_version": "visual-description-v1",

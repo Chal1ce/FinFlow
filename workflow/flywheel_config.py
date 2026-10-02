@@ -40,7 +40,13 @@ class ModelRole:
                 runtime.llm_timeout_seconds,
                 int(os.getenv("LLM_MAX_TOKENS", "4096")),
             )
-        prefix = "FIN_DOC_VISION" if role == "vision" else f"FIN_DOC_PRETRAIN_{role.upper()}"
+        prefix = (
+            "FIN_DOC_" + role.upper()
+            if role.startswith("sft_")
+            else "FIN_DOC_VISION"
+            if role == "vision"
+            else f"FIN_DOC_PRETRAIN_{role.upper()}"
+        )
         return cls(
             role,
             os.getenv(prefix + "_API_URL", ""),
@@ -89,9 +95,20 @@ class FlywheelConfig:
         self.task_limit = int(os.getenv("FIN_DOC_FLYWHEEL_MAX_TASKS", self.policy.get("max_tasks", 100)))
         self.deadline_seconds = float(os.getenv("FIN_DOC_FLYWHEEL_MAX_SECONDS", self.policy.get("max_seconds", 7200)))
         self.model_limit = int(os.getenv("FIN_DOC_FLYWHEEL_MAX_MODEL_REQUESTS", self.policy.get("max_model_requests", 50)))
+        self.sft = None
+        sft = self.policy.get("sft", {})
+        if not isinstance(sft, dict) or type(sft.get("enabled", False)) is not bool:
+            raise ValueError("sft must be an object with boolean enabled")
+        if sft.get("enabled"):
+            from training.sft_config import SFTConfig
+
+            sft_path = Path(sft.get("config", "config/sft.json"))
+            if not sft_path.is_absolute():
+                sft_path = self.path.resolve().parent.parent / sft_path
+            self.sft = SFTConfig(sft_path)
         self.version = digest(
             {
-                "policy": self.policy,
+                "policy": {k: v for k, v in self.policy.items() if k != "sft"},
                 "models": {k: v.identity() for k, v in self.roles.items()},
                 "backend": self.backend,
                 "governance_backend": self.governance_backend,
@@ -109,6 +126,8 @@ class FlywheelConfig:
 
     def preflight(self) -> dict:
         errors = []
+        if self.sft is not None:
+            errors.extend(self.sft.preflight()["errors"])
         if self.backend not in {"local", "cloud"}:
             errors.append("OCR backend must be local or cloud")
         elif self.backend == "local" and not self.runtime.local_paddle.api_url:
