@@ -1,6 +1,18 @@
 {
+  "app-discord": {
+    "source_sha256": "abd0ac5d4c3c6cc8c8205be1770cfaad18074e2a97792406b700ff8344f53911",
+    "coverage": "full"
+  },
   "app-integrations": {
-    "source_sha256": "2b69a976b9047c6d8e87580d24e767d3ff45d6daf9eff91b202de59ca3def77e",
+    "source_sha256": "c05ce82a761e8ddba6110ed691db78cd3b829c777c419517a8fc71a20b3d24ef",
+    "coverage": "full"
+  },
+  "app-slack": {
+    "source_sha256": "9c9774bdec4ce165363d9cf1bc98f000ef009325bae16a7d853df56ebb7fb3d7",
+    "coverage": "full"
+  },
+  "app-telegram": {
+    "source_sha256": "4758d9316535d4596628ff709e394925250e75d9d9ad17f0cdb5060f480d8369",
     "coverage": "full"
   },
   "data-flywheel": {
@@ -20,7 +32,7 @@
     "coverage": "full"
   },
   "index": {
-    "source_sha256": "2c6f8bd0e9cca60f24fde2cbceca58296d1825e038bc8f7c0f21b3735b85a5d4",
+    "source_sha256": "c0722881adfa831c25d35be0bead99e331ab624bb4cc9d75dddce57a9f6e5f1b",
     "coverage": "summary"
   },
   "pretraining": {

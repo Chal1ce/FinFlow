@@ -415,7 +415,7 @@ class DailyFlywheel:
         application_documents = set()
         for document in self.store.records("document"):
             source = document.get("source", {})
-            if source.get("source_name") not in {"app-feishu", "app-mcp", "app-local"}:
+            if source.get("source_name") not in {"app-feishu", "app-telegram", "app-discord", "app-slack", "app-mcp", "app-local"}:
                 continue
             if not document.get("source_record_uid") or not document.get("pdf_artifact_uid"):
                 raise ValueError("application document is missing its source lineage")

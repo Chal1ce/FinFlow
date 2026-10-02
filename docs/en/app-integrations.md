@@ -1,22 +1,31 @@
 ---
 title: App integrations
 nav_order: 3.5
+has_children: true
 ---
 
-# Feishu and MCP
+# App integrations and MCP
 
-Use Feishu to inspect runs, submit PDFs, view visual candidates, and record human review.
+Use Feishu, Telegram, Discord, or Slack to inspect runs, submit PDFs, view visual candidates, and record human review.
 OpenClaw, Hermes, and other MCP clients can call the same FinFlow service through local stdio.
-The native Feishu channel accepts fixed commands; external assistants handle natural language.
+Native channels accept fixed commands; external assistants handle natural language.
 
-This version includes Feishu messaging and a local MCP server. Feishu cloud documents,
-Bitable, other native channels, and remote HTTP MCP are not implemented.
-Code and static checks are complete; real messaging, card callbacks, and assistant interoperability
-still require validation with configured applications.
+| Entry | Transport | Example | Setup |
+| --- | --- | --- | --- |
+| Feishu | Official SDK long connection | `/status` | Sections 2–3 below; includes review buttons |
+| Telegram | Bot API long polling | `/status` | [Telegram](app-telegram.md) |
+| Discord | Gateway | `!status` | [Discord](app-discord.md) |
+| Slack | Socket Mode | `!status` | [Slack](app-slack.md) |
+| OpenClaw / Hermes and others | Local MCP stdio | `finflow_status` | Section 4 below |
+
+All four messaging channels support PDFs, original evidence files, human review commands, and reports.
+Channels default to disabled and require their own credentials, bot identity, and user allowlist.
+Feishu cloud documents, Bitable, and remote HTTP MCP are not implemented.
+Static checks are complete; functional tests and live channel/client validation remain pending.
 
 ```mermaid
 flowchart LR
-    feishu[Feishu messages / PDFs / review cards] --> service[Shared operations and permissions]
+    feishu[Feishu / Telegram / Discord / Slack] --> service[Shared operations and permissions]
     assistant[OpenClaw / Hermes] --> mcp[MCP tools]
     mcp --> service
     service --> read[Status / reports / lineage]
@@ -33,12 +42,14 @@ Use Python 3.10+ on macOS or Linux, from the repository root:
 
 ```sh
 . .venv/bin/activate
-python -m pip install -e '.[feishu,mcp]'
+python -m pip install -e '.[feishu,discord,slack,mcp]'
 cp -n .env.example .env
 cp -n config/integrations.json config/integrations.local.json
 ```
 
-Install only `.[feishu]` or `.[mcp]` if you need one entry point. Add fields to an existing `.env`.
+Install only the `feishu`, `discord`, `slack`, or `mcp` extra you need; Telegram uses core dependencies.
+Add fields to an existing `.env`. Existing local integration configurations remain compatible:
+add new channel sections without overwriting prior settings.
 The local integration configuration is Git-ignored and can hold user IDs, chat IDs, and local paths.
 
 Add Feishu credentials to `.env`:
@@ -51,6 +62,10 @@ FINFLOW_FEISHU_APP_SECRET=your_app_secret
 Read-only MCP needs neither Feishu nor model credentials. Processing requires the existing
 [flywheel configuration](data-flywheel.md). All processes must use the same data directory and
 flywheel configuration. Global `--data-root` and `--flywheel-config` options go before the subcommand.
+
+Run one process per enabled channel using the **same local configuration containing all channel settings**.
+Each receiver includes a worker; shared process locks coordinate jobs. A data directory permits only
+one receiver for a particular bot. Do not run workers with stale or different access settings against the same data root.
 
 ## 2. Configure Feishu
 
@@ -161,14 +176,15 @@ and expired tickets cannot reuse that authorization. Request a new candidate car
 Changed image checksums block review. Each card can submit only one decision.
 
 Acceptance still requires source training admission in `config/flywheel.json`.
-Uploaded sources are `app-feishu`, `app-mcp`, and `app-local`, with training unapproved by default.
+Uploaded sources are `app-feishu`, `app-telegram`, `app-discord`, `app-slack`, `app-mcp`, and `app-local`,
+with training unapproved by default.
 Only configure `source_policy` after confirming the intended scope: it applies to all files from
 that channel. There is no per-upload licensing interface yet. Accepted candidates enter publication
 on the next flywheel run.
 
 ### Report notifications
 
-Add recipient `oc_...` chat IDs to `notification_chats` and keep the worker running.
+Add recipient IDs to the relevant channel's `notification_chats` (`oc_...` IDs for Feishu) and keep the worker running.
 When a new saved flywheel summary appears for today, the worker enqueues an updated daily report
 once per run and destination. The default timezone is `Asia/Shanghai`.
 Candidate/backlog counts are the latest cumulative snapshot; completed-task/model-request counts
@@ -287,6 +303,9 @@ Submitted reviews are not automatically retried; request fresh evidence and insp
 Inbox/outbox failures back off and stop after five attempts. Outbound stages checkpoint message
 receipts and use Feishu message UUIDs to help deduplicate retries. Network/process interruptions
 can still produce duplicate notifications; exactly-once delivery is not guaranteed.
+The new channels also persist receipts and respect available rate-limit delays. Telegram commits
+events and its polling cursor together; Slack persists before acknowledging events. Discord does
+not fetch offline history after a cold restart: messages not yet in the inbox must be resent.
 
 Recover failed notifications after fixing credentials, permissions, or connectivity:
 
@@ -305,6 +324,8 @@ before backing up the complete data directory, including databases and local evi
 - `integrations/service.py`: shared operations, provenance, and human review.
 - `integrations/store.py`, `runtime.py`: persistence, locks, background jobs, and notifications.
 - `integrations/channels/feishu.py`: event normalization, files, images, and cards.
+- `integrations/channels/telegram.py`, `discord.py`, `slack.py`: the three additional channels.
+- `integrations/channels/registry.py`, `common.py`: channel loading, bounded files, and evidence delivery.
 - `integrations/mcp_server.py`: read-only default and optional mutation tools.
 - `integrations/cli.py`: command entry point.
 

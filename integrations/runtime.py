@@ -6,7 +6,8 @@ import json
 import shlex
 import threading
 
-from integrations.channels.feishu import FeishuClient
+from integrations.channels.registry import ChannelRegistry
+from integrations.channels.common import retry_delay
 from integrations.service import FinFlowService
 from integrations.store import IntegrationStore, ProcessLock
 from workflow.flywheel import PipelineBusyError
@@ -23,6 +24,15 @@ HELP = """FinFlow 命令：
 /retry TASK_ID 或 JOB_ID — 重试失败任务
 /review TICKET accepted|rejected|needs_review 原因 — 人工复核
 直接发送 PDF 可导入并排队处理。运行/导入需 operator，复核需 reviewer。"""
+HELP += "\nDiscord / Slack 使用 ! 前缀（如 !status）；群内需 @ 机器人。"
+
+
+def reply_target(event):
+    target = {key: event[key] for key in ("app_id", "chat_id", "user_id", "chat_type")}
+    target["channel"] = event.get("channel", "feishu")
+    if event.get("thread_id"):
+        target["thread_id"] = event["thread_id"]
+    return target
 
 
 def report_text(report):
@@ -45,32 +55,28 @@ def report_text(report):
 
 
 class CommandRouter:
-    def __init__(self, service: FinFlowService, client=None):
+    def __init__(self, service: FinFlowService, client=None, *, registry=None):
         self.service = service
         self.config = service.config
-        self.client = client or FeishuClient(self.config)
+        self.registry = registry or ChannelRegistry(self.config, {"feishu": client} if client else None)
 
     def handle(self, event):
-        if event["app_id"] != self.config.app_id:
+        channel = event.get("channel", "feishu")  # persisted v1 Feishu events remain compatible
+        if event["app_id"] != self.config.identity(channel):
             raise PermissionError("application identity changed")
-        actor = self.config.actor("feishu", event["user_id"])
-        if event.get("chat_type") == "group" and event["chat_id"] not in self.config.feishu.get("allowed_group_chats", []):
-            raise PermissionError("chat is no longer allowed")
-        target = {
-            "channel": "feishu",
-            "app_id": self.config.app_id,
-            "chat_id": event["chat_id"],
-            "user_id": event["user_id"],
-            "chat_type": event.get("chat_type", ""),
-        }
+        actor = self.config.actor(channel, event["user_id"])
+        self.config.check_chat(channel, event["chat_id"], event.get("chat_type"))
+        target = reply_target(event)
         request_id = event["event_key"]
         if event["kind"] == "file":
             actor.require("operator")
-            temporary = self.client.download(event["message_id"], event["file_id"])
+            temporary = self.registry.get(channel).download_event(event)
             try:
                 result = self.service.import_pdf(actor, temporary, request_id, origin=event, reply=target, trusted_attachment=True)
             finally:
                 temporary.unlink(missing_ok=True)
+        elif event["kind"] == "notice":
+            return {"kind": "text", "text": event["text"]}
         elif event["kind"] == "review":
             result = self.service.submit_review(
                 actor, event["ticket"], event["decision"], "通过飞书复核卡片确认", event["chat_id"], reply=target
@@ -80,6 +86,8 @@ class CommandRouter:
             if not args:
                 return {"kind": "text", "text": HELP}
             command, params = args[0].lower(), args[1:]
+            if command.startswith("!"):
+                command = "/" + command[1:]
             if command == "/status" and not params:
                 result = self.service.status(actor)
             elif command == "/report" and len(params) <= 1:
@@ -111,11 +119,11 @@ class CommandRouter:
 
 
 class Worker:
-    def __init__(self, service, *, router=None, client=None):
+    def __init__(self, service, *, router=None, client=None, registry=None):
         self.service = service
         self.config = service.config
-        self.client = client or FeishuClient(self.config)
-        self.router = router or CommandRouter(service, self.client)
+        self.registry = registry or ChannelRegistry(self.config, {"feishu": client} if client else None)
+        self.router = router or CommandRouter(service, registry=self.registry)
 
     def job_once(self):
         try:
@@ -148,13 +156,7 @@ class Worker:
                 if not row:
                     return False
                 event = json.loads(row["payload_json"])
-                target = {
-                    "channel": "feishu",
-                    "app_id": event["app_id"],
-                    "chat_id": event["chat_id"],
-                    "user_id": event["user_id"],
-                    "chat_type": event.get("chat_type", ""),
-                }
+                target = reply_target(event)
                 try:
                     payload = self.router.handle(event)
                 except PermissionError as exc:
@@ -170,7 +172,7 @@ class Worker:
                         "text": f"FinFlow 无法执行：{type(exc).__name__}。检查命令参数、候选版本或来源准入；/help 查看用法。",
                     }
                 except Exception as exc:
-                    store.fail_item("app_event", row["event_key"], type(exc).__name__)
+                    store.fail_item("app_event", row["event_key"], type(exc).__name__, retry_after=retry_delay(exc))
                     return True
                 with store.db:
                     store.queue_delivery("event:" + row["event_key"], target, payload)
@@ -180,20 +182,27 @@ class Worker:
             return False
 
     def queue_reports(self):
-        if not self.config.feishu.get("enabled") or not self.config.feishu.get("notification_chats"):
+        channels = {
+            name: settings
+            for name, settings in self.config.channels.items()
+            if settings.get("enabled") and settings.get("notification_chats")
+        }
+        if not channels:
             return
         report = self.service.report(self.config.actor("local"))
         if not report["latest"]:
             return
-        for chat_id in self.config.feishu["notification_chats"]:
-            target = {"channel": "feishu", "app_id": self.config.app_id, "chat_id": chat_id, "scheduled": True}
-            key = digest([self.config.app_id, chat_id, "report", report["date"], report["latest"]["run_id"]])
-            with IntegrationStore(self.config.root) as store, store.db:
-                store.queue_delivery(key, target, {"kind": "text", "text": report_text(report)})
+        for channel, settings in channels.items():
+            for chat_id in settings["notification_chats"]:
+                identity = self.config.identity(channel)
+                target = {"channel": channel, "app_id": identity, "chat_id": chat_id, "scheduled": True}
+                # Preserve the original Feishu delivery identity during upgrade.
+                key_parts = [identity, chat_id, "report", report["date"], report["latest"]["run_id"]]
+                key = digest(key_parts if channel == "feishu" else [channel, *key_parts])
+                with IntegrationStore(self.config.root) as store, store.db:
+                    store.queue_delivery(key, target, {"kind": "text", "text": report_text(report)})
 
     def delivery_once(self):
-        if not self.config.feishu.get("enabled"):
-            return False
         try:
             with ProcessLock(self.config.root, "app-outbox"), IntegrationStore(self.config.root) as store:
                 row = store.next_item("app_outbox")
@@ -201,17 +210,16 @@ class Worker:
                     return False
                 target = json.loads(row["target_json"])
                 try:
-                    if target.get("channel") != "feishu" or target.get("app_id") != self.config.app_id:
+                    channel = target.get("channel")
+                    settings = self.config.channels.get(channel, {})
+                    if not settings.get("enabled") or target.get("app_id") != self.config.identity(channel):
                         raise PermissionError("delivery belongs to another application")
                     if target.get("scheduled"):
-                        if target["chat_id"] not in self.config.feishu.get("notification_chats", []):
+                        if target["chat_id"] not in settings.get("notification_chats", []):
                             raise PermissionError("notification target removed")
                     else:
-                        self.config.actor("feishu", target["user_id"])
-                        if target.get("chat_type") == "group" and target["chat_id"] not in self.config.feishu.get(
-                            "allowed_group_chats", []
-                        ):
-                            raise PermissionError("group removed")
+                        self.config.actor(channel, target["user_id"])
+                        self.config.check_chat(channel, target["chat_id"], target.get("chat_type"))
 
                     def checkpoint(receipts):
                         with store.db:
@@ -219,7 +227,7 @@ class Worker:
                                 "UPDATE app_outbox SET receipt_json=? WHERE delivery_id=?", (json.dumps(receipts), row["delivery_id"])
                             )
 
-                    self.client.deliver(
+                    self.registry.get(channel).deliver(
                         target, json.loads(row["payload_json"]), row["delivery_id"], json.loads(row["receipt_json"] or "{}"), checkpoint
                     )
                     with store.db:
@@ -231,7 +239,7 @@ class Worker:
                             (type(exc).__name__, row["delivery_id"]),
                         )
                 except Exception as exc:
-                    store.fail_item("app_outbox", row["delivery_id"], type(exc).__name__)
+                    store.fail_item("app_outbox", row["delivery_id"], type(exc).__name__, retry_after=retry_delay(exc))
                 return True
         except BlockingIOError:
             return False

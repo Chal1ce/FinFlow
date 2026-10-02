@@ -26,7 +26,7 @@ permalink: /
 | 使用场景 | 推荐入口 | 接着阅读 |
 | --- | --- | --- |
 | 每日自动抓取、处理图表并生成预训练数据 | `workflow.flywheel_cli` | [每日数据飞轮](data-flywheel.md) |
-| 飞书命令、PDF 上传、复核，或连接外部助手 | `integrations.cli` | [应用连接与 MCP](app-integrations.md) |
+| 飞书 / Telegram / Discord / Slack、PDF 上传、复核，或连接外部助手 | `integrations.cli` | [应用连接与 MCP](app-integrations.md) |
 | 手工提供一份财报 PDF | `workflow.cli` 的 `local_financial` | [运维手册](local_operations.md#21-从本地-pdf-完整处理) |
 | 已经采集好财报 | `workflow.cli` 的 `collected_financial` | [运维手册](local_operations.md#22-采集后接管财报) |
 | 已经完成 OCR | `workflow.cli` 的 `govern_and_publish` | [运维手册](local_operations.md#23-治理已有-ocr-输出) |
@@ -48,7 +48,7 @@ permalink: /
 ### 使用与配置
 
 - [每日数据飞轮](data-flywheel.md)：完整自动流程的主要手册。
-- [应用连接与 MCP](app-integrations.md)：飞书、后台 worker 和 OpenClaw / Hermes 配置。
+- [应用连接与 MCP](app-integrations.md)：四个消息入口、后台 worker 和 OpenClaw / Hermes 配置，左侧子页面按软件分开说明。
 - [数据来源与采集](acquisition.md)：财报、论文与手工下载清单。
 - [PaddleOCR 部署与连接](paddleocr_remote.md)：自建服务、隧道与云端客户端。
 - [命令与参数参考](cli-reference.md)：独立入口的详细参数。

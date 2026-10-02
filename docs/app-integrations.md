@@ -1,19 +1,28 @@
 ---
 title: 应用连接
 nav_order: 3.5
+has_children: true
 ---
 
-# 飞书与 MCP 接入
+# 应用连接与 MCP
 
-通过飞书查询飞轮状态、提交 PDF、查看图表候选和完成人工复核；也可以让 OpenClaw、Hermes 等 MCP 客户端调用 FinFlow。
-两个入口共用任务、权限和血缘服务。原生飞书入口使用固定命令，外部助手负责自然语言交互。
+通过飞书、Telegram、Discord、Slack 查询飞轮状态、提交 PDF、查看图表候选和完成人工复核；也可以让 OpenClaw、Hermes 等 MCP 客户端调用 FinFlow。
+各入口共用任务、权限和血缘服务。原生消息入口使用固定命令，外部助手负责自然语言交互。
 
-本版本提供飞书消息连接和本地 stdio MCP 服务。飞书云文档、多维表格、其他原生消息渠道与远程 HTTP MCP 尚未接入。
-接入层目前完成代码和静态检查，真实飞书收发、卡片回调以及外部助手联调仍需配置后验证。
+| 入口 | 接收方式 | 常用命令 | 配置说明 |
+| --- | --- | --- | --- |
+| 飞书 | 官方 SDK 长连接 | `/status` | 本页第 2–3 节；支持复核按钮 |
+| Telegram | Bot API 长轮询 | `/status` | [Telegram 接入](app-telegram.md) |
+| Discord | Gateway | `!status` | [Discord 接入](app-discord.md) |
+| Slack | Socket Mode | `!status` | [Slack 接入](app-slack.md) |
+| OpenClaw / Hermes 等 | 本机 MCP stdio | `finflow_status` | 本页第 4 节 |
+
+四个消息入口均提供 PDF 导入、原图/完整候选文件、人工复核命令和日报通知。每个入口默认关闭，需要各自的凭证、身份与用户白名单。
+飞书云文档、多维表格、远程 HTTP MCP 尚未接入。代码与静态检查已完成，功能测试及真实账号/外部助手联调仍待执行。
 
 ```mermaid
 flowchart LR
-    feishu[飞书消息 / PDF / 复核卡片] --> service[统一操作与权限]
+    feishu[飞书 / Telegram / Discord / Slack] --> service[统一操作与权限]
     assistant[OpenClaw / Hermes] --> mcp[MCP 工具]
     mcp --> service
     service --> read[状态 / 日报 / 血缘查询]
@@ -30,12 +39,13 @@ flowchart LR
 
 ```sh
 . .venv/bin/activate
-python -m pip install -e '.[feishu,mcp]'
+python -m pip install -e '.[feishu,discord,slack,mcp]'
 cp -n .env.example .env
 cp -n config/integrations.json config/integrations.local.json
 ```
 
-只需一个入口时可只安装 `.[feishu]` 或 `.[mcp]`。已有 `.env` 时补充字段。
+只需一个入口时可只安装 `.[feishu]`、`.[discord]`、`.[slack]` 或 `.[mcp]`；Telegram 使用基础依赖。
+已有 `.env` 时补充字段。已有本机集成配置时，只补齐新渠道字段，无需覆盖原设置；旧飞书配置保持兼容。
 `config/integrations.local.json` 已被 Git 忽略，适合存放本机用户 ID、会话 ID 和路径。
 
 在 `.env` 中配置：
@@ -47,6 +57,10 @@ FINFLOW_FEISHU_APP_SECRET=your_app_secret
 
 MCP 只读查询不需要飞书凭证或模型。执行采集、OCR、治理和数据生成，仍需完成[每日飞轮配置](data-flywheel.md)。
 所有进程应使用同一份飞轮配置和数据目录；通过 `--flywheel-config`、`--data-root` 可以显式指定，均放在子命令之前。
+
+同时启用多个渠道时，为每个渠道各开一个进程，使用**同一份包含全部渠道设置的本机配置**。
+各渠道进程都带 worker，进程锁协调共享任务；同一数据目录内不允许重复启动同一个机器人的接收器。
+不要让使用旧配置或不同权限配置的 worker 同时操作同一数据目录。
 
 ## 2. 飞书应用设置
 
@@ -144,13 +158,13 @@ ticket 绑定申请者、会话、候选文件校验和与当前决定版本，�
 同一张卡片只能提交一个决定；修改决定需要获取新卡片。原图校验失败时不会接受复核。
 
 通过审核仍需满足 `config/flywheel.json` 中的来源训练准入。
-应用上传来源分别为 `app-feishu`、`app-mcp`、`app-local`，默认未批准训练用途。
+应用上传来源分别为 `app-feishu`、`app-telegram`、`app-discord`、`app-slack`、`app-mcp`、`app-local`，默认未批准训练用途。
 只在确认该来源适用范围后配置 `source_policy`，这会影响该渠道的全部文件；当前尚无逐份上传文件的许可管理界面。
 审核通过的候选在下一次飞轮运行时进入发布流程。
 
 ### 日报通知
 
-在 `notification_chats` 中填写允许接收日报的 `oc_...` 会话 ID，保持 worker 在线。
+在对应渠道的 `notification_chats` 中填写允许接收日报的会话 ID（飞书为 `oc_...`），保持 worker 在线。
 当天出现新的已保存飞轮摘要时，worker 排队发送更新的日报；同一运行、同一会话只排队一次。
 时区默认 `Asia/Shanghai`。候选和积压数量是最近一次运行的累计快照，处理任务与模型请求是当天运行摘要的汇总。
 这不是额外的采集调度器，继续使用[现有 cron / launchd](data-flywheel.md#6-每日定时)。
@@ -264,6 +278,8 @@ python -m integrations.cli job job-任务ID
 
 消息和通知采用持久化队列，失败最多自动尝试五次并退避。通知保存各阶段发送回执，并使用飞书消息 UUID 辅助去重；
 网络或进程中断仍可能造成重复通知，不承诺严格一次投递。
+新渠道同样保存发送回执，并尊重可用的限流等待时间。Telegram 先持久化消息再保存轮询位置；
+Slack 先持久化再确认事件。Discord 冷启动不会自动补拉离线消息，未入库的指令需要重新发送。
 
 恢复失败通知：
 
@@ -281,6 +297,8 @@ python -m integrations.cli --config config/integrations.local.json retry-deliver
 - `integrations/service.py`：复用飞轮的业务动作、来源登记和人工复核。
 - `integrations/store.py`、`runtime.py`：持久化队列、进程锁、后台执行与通知。
 - `integrations/channels/feishu.py`：消息归一化、附件与卡片。
+- `integrations/channels/telegram.py`、`discord.py`、`slack.py`：三个新增入口。
+- `integrations/channels/registry.py`、`common.py`：渠道加载、附件限制及原始证据发送。
 - `integrations/mcp_server.py`：只读默认、可选写工具的 MCP 服务。
 - `integrations/cli.py`：统一运行入口。
 

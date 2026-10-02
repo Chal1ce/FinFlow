@@ -17,7 +17,7 @@ from core.context import PipelineContext
 from core.flywheel_files import register_file, safe_path, sha256, write_json
 from core.ids import stable_uid
 from ingestion.local_documents import LocalPdfImporter
-from integrations.config import Actor, IntegrationConfig
+from integrations.config import Actor, IntegrationConfig, CHANNELS
 from integrations.store import IntegrationStore
 from spiders.downloader import inspect_pdf
 from storage.flywheel_review import human_review, trace
@@ -207,8 +207,8 @@ class FinFlowService:
             roots = [Path(p).expanduser().resolve() for p in self.config.mcp.get("import_roots", [])]
             if not any(source_path.is_relative_to(root) for root in roots):
                 raise PermissionError("PDF is outside configured MCP import_roots")
-        if actor.channel == "feishu" and not trusted_attachment:
-            raise PermissionError("Feishu import requires a verified message attachment")
+        if actor.channel in CHANNELS and not trusted_attachment:
+            raise PermissionError("channel import requires a verified message attachment")
         if not source_path.is_file() or source_path.suffix.lower() != ".pdf":
             raise ValueError("provide one PDF file")
         inbox = self.root / "integrations" / "inbox"
@@ -234,7 +234,7 @@ class FinFlowService:
             metadata = {
                 k: str(v)[:500]
                 for k, v in (origin or {}).items()
-                if k in {"app_id", "chat_id", "message_id", "file_id", "filename", "received_at"}
+                if k in {"app_id", "chat_id", "message_id", "file_id", "filename", "received_at", "thread_id"}
             }
             metadata.update({"actor_id": actor.id, "channel": actor.channel})
             payload = {
@@ -250,7 +250,7 @@ class FinFlowService:
 
     def review_ticket(self, actor: Actor, candidate_id: str, chat_id: str, *, chat_type="p2p") -> tuple[dict, str]:
         actor.require("reviewer")
-        if actor.channel not in {"feishu", "local"}:
+        if actor.channel not in {*CHANNELS, "local"}:
             raise PermissionError("human review is available only to authenticated people")
         if chat_type not in {"p2p", "group"}:
             raise ValueError("unsupported conversation type")
@@ -274,7 +274,7 @@ class FinFlowService:
 
     def submit_review(self, actor, ticket, decision, reason, chat_id, *, reply=None):
         actor.require("reviewer")
-        if actor.channel not in {"feishu", "local"}:
+        if actor.channel not in {*CHANNELS, "local"}:
             raise PermissionError("MCP cannot record a human decision")
         if decision not in {"accepted", "rejected", "needs_review"} or not 1 <= len(reason.strip()) <= 1000:
             raise ValueError("invalid decision or reason")
@@ -282,8 +282,8 @@ class FinFlowService:
             row = store.db.execute("SELECT * FROM app_review WHERE ticket_hash=?", (digest(ticket),)).fetchone()
         if row is None or row["actor_id"] != actor.id or row["chat_id"] != chat_id:
             raise PermissionError("review ticket does not belong to this user and conversation")
-        if actor.channel == "feishu" and row["chat_type"] == "group" and chat_id not in self.config.feishu.get("allowed_group_chats", []):
-            raise PermissionError("review conversation is no longer allowed")
+        if actor.channel in CHANNELS:
+            self.config.check_chat(actor.channel, chat_id, row["chat_type"])
         if row["expires_at"] < time.time():
             raise ValueError("review ticket expired; request the candidate again")
         payload = {
@@ -307,13 +307,12 @@ class FinFlowService:
         action, payload = job["action"], job["payload"]
         actor.require("reviewer" if action == "review" else "operator")
         reply = job.get("reply") or {}
-        if actor.channel == "feishu" and reply.get("chat_type") == "group":
-            if reply.get("chat_id") not in self.config.feishu.get("allowed_group_chats", []):
-                raise PermissionError("job conversation is no longer allowed")
+        if actor.channel in CHANNELS:
+            self.config.check_chat(actor.channel, reply.get("chat_id"), reply.get("chat_type"))
         if action == "run":
             return DailyFlywheel(self.config.flywheel).run(batch_id=job["job_id"], discover=payload["discover"])
         if action == "review":
-            if actor.channel not in {"feishu", "local"}:
+            if actor.channel not in {*CHANNELS, "local"}:
                 raise PermissionError("MCP cannot record a human decision")
             with DailyLock(self.root), FlywheelStore(self.root / "state/pipeline.db") as store:
                 current = self.candidate(actor, payload["candidate_id"])

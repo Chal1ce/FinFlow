@@ -19,7 +19,7 @@ pretraining (CPT).
 - Image/table crops in one asset table, retaining table OCR and visual descriptions.
 - Independent review, target-tokenizer segmentation, and grouped splits.
 - Incremental runs, bounded retries, recovery, deduplication, lineage, immutable releases.
-- Feishu commands, PDF imports, human visual review, reports, and an MCP interface for assistants.
+- Feishu, Telegram, Discord, and Slack commands, PDF imports, human visual review, reports, and MCP tools for assistants.
 
 ```mermaid
 flowchart LR
@@ -71,7 +71,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | --- | --- |
 | Installation and choosing a workflow | [Quick start](docs/en/quick-start.md) |
 | Models, admission, review, retries, lineage, releases | [Daily data flywheel](docs/en/data-flywheel.md) |
-| Feishu operations or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) |
+| Messaging apps or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) · [Telegram](docs/en/app-telegram.md) · [Discord](docs/en/app-discord.md) · [Slack](docs/en/app-slack.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
 | Actual missing configuration | [Environment check](docs/en/environment-check.md) |
 | Detailed OCR, acquisition, governance, CLI, operations | [Reference guides; detailed pages in Chinese](docs/en/reference.md) |

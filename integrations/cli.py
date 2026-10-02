@@ -6,9 +6,10 @@ import argparse
 import json
 import threading
 import uuid
+from contextlib import ExitStack
 from pathlib import Path
 
-from integrations.config import IntegrationConfig, PROJECT
+from integrations.config import IntegrationConfig, PROJECT, CHANNELS
 from integrations.service import FinFlowService
 from workflow.flywheel_config import FlywheelConfig
 
@@ -20,7 +21,7 @@ def main(argv=None):
     parser.add_argument("--data-root", type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
     preflight = commands.add_parser("preflight")
-    preflight.add_argument("--channel", choices=["feishu", "mcp"], default="feishu")
+    preflight.add_argument("--channel", choices=[*CHANNELS, "mcp"], default="feishu")
     commands.add_parser("status")
     report = commands.add_parser("report")
     report.add_argument("--date")
@@ -42,7 +43,8 @@ def main(argv=None):
     retry_delivery.add_argument("delivery_id")
     worker = commands.add_parser("worker")
     worker.add_argument("--once", action="store_true")
-    commands.add_parser("feishu")
+    for channel in CHANNELS:
+        commands.add_parser(channel)
     commands.add_parser("mcp")
     args = parser.parse_args(argv)
     try:
@@ -53,11 +55,13 @@ def main(argv=None):
 
             create_server(service).run(transport="stdio")
             return 0
-        if args.command in {"worker", "feishu"}:
+        if args.command in {"worker", *CHANNELS}:
             from integrations.runtime import Worker
+            from integrations.store import ProcessLock
+            from workflow.flywheel_config import digest
 
-            if args.command == "feishu":
-                check = config.preflight(channel="feishu")
+            if args.command in CHANNELS:
+                check = config.preflight(channel=args.command)
                 if check["errors"]:
                     print(json.dumps(check, ensure_ascii=False, indent=2))
                     return 2
@@ -69,19 +73,21 @@ def main(argv=None):
                 worker.delivery_once()
                 return 0
             stop = threading.Event()
-            worker.serve(stop)
-            try:
-                if args.command == "feishu":
-                    from integrations.channels.feishu import listen
-
-                    listen(config, stop)
-                else:
-                    while not stop.wait(1):
-                        pass
-            except KeyboardInterrupt:
-                pass
-            finally:
-                stop.set()
+            with ExitStack() as stack:
+                if args.command in CHANNELS:
+                    lock_id = digest([args.command, config.identity(args.command)])[:24]
+                    stack.enter_context(ProcessLock(config.root, "channel-" + lock_id))
+                worker.serve(stop)
+                try:
+                    if args.command in CHANNELS:
+                        worker.registry.get(args.command).listen(stop)
+                    else:
+                        while not stop.wait(1):
+                            pass
+                except KeyboardInterrupt:
+                    pass
+                finally:
+                    stop.set()
             return 0
         if args.command == "preflight":
             result = config.preflight(channel=args.channel)

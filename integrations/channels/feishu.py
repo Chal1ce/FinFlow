@@ -211,6 +211,12 @@ class FeishuClient:
                 send(str(i), "text", {"text": text[start : start + 2000] or "FinFlow"})
         return receipts
 
+    def download_event(self, event):
+        return self.download(event["message_id"], event["file_id"])
+
+    def listen(self, stop):
+        listen(self.config, stop, client=self)
+
 
 def normalize_message(config, event: dict, *, bot_id="") -> dict | None:
     """Accept only authenticated SDK events from configured human senders."""
@@ -240,6 +246,7 @@ def normalize_message(config, event: dict, *, bot_id="") -> dict | None:
     if kind not in {"text", "file"}:
         return None
     result = {
+        "channel": "feishu",
         "kind": kind,
         "user_id": user,
         "chat_id": chat,
@@ -285,6 +292,7 @@ def normalize_card(config, event: dict) -> dict | None:
     if ticket["chat_type"] == "group" and chat not in config.feishu.get("allowed_group_chats", []):
         return None
     return {
+        "channel": "feishu",
         "kind": "review",
         "app_id": config.app_id,
         "user_id": user,
@@ -333,3 +341,6 @@ def listen(config, stop, *, client=None):
         socket.start()
     finally:
         stop.set()
+
+
+Client = FeishuClient

@@ -19,7 +19,7 @@ PDF、图片、表格和派生文件保存在本地，SQLite 记录任务、版�
 - **图片与表格**：保存区域图像，共用一张资产表；保留表格 OCR 结构和多模态描述。
 - **预训练数据**：将原文、图表描述及可选翻译/改写送入独立审核，按目标 tokenizer 分段。
 - **自动运行与追溯**：每日增量采集、任务重试、断点恢复、去重、血缘查询及不可变发布。
-- **应用连接**：飞书命令、PDF 导入、图表人工复核和日报；提供 MCP 接口供外部助手调用。
+- **应用连接**：飞书、Telegram、Discord、Slack 的命令、PDF 导入、图表人工复核和日报；MCP 接口支持外部助手调用。
 
 ## 处理流程
 
@@ -87,7 +87,7 @@ python -m workflow.cli list
 | --- | --- |
 | 找到合适入口、了解阅读顺序 | [文档首页](docs/index.md) |
 | 配置模型、运行飞轮、处理待复核记录、追查血缘 | [每日数据飞轮](docs/data-flywheel.md) |
-| 从飞书操作，或连接 OpenClaw / Hermes | [应用连接与 MCP](docs/app-integrations.md) |
+| 从聊天软件操作，或连接 OpenClaw / Hermes | [应用连接与 MCP](docs/app-integrations.md) · [Telegram](docs/app-telegram.md) · [Discord](docs/app-discord.md) · [Slack](docs/app-slack.md) |
 | 单独发现来源或下载 PDF | [数据来源与采集](docs/acquisition.md) |
 | 手工处理财报、了解目录和交付内容 | [财报处理与交付](docs/financial-workflow.md) |
 | 调整清洗规则、切片与 LLM 治理 | [清洗与治理](docs/governance.md) |

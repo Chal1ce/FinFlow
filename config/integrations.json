@@ -14,5 +14,28 @@
     "users": {},
     "allowed_group_chats": [],
     "notification_chats": []
+  },
+  "telegram": {
+    "enabled": false,
+    "bot_id": "",
+    "users": {},
+    "allowed_group_chats": [],
+    "notification_chats": []
+  },
+  "discord": {
+    "enabled": false,
+    "bot_id": "",
+    "users": {},
+    "allowed_group_chats": [],
+    "notification_chats": []
+  },
+  "slack": {
+    "enabled": false,
+    "team_id": "",
+    "app_id": "",
+    "bot_user_id": "",
+    "users": {},
+    "allowed_group_chats": [],
+    "notification_chats": []
   }
 }
