@@ -49,7 +49,7 @@ def human_review(config, store, candidate_uid, status, *, reason, reviewer):
             )
             store.connection.execute(
                 "UPDATE processing_task SET status='superseded' WHERE kind='review' AND entity_uid=? "
-                "AND status IN ('needs_review','rejected','failed','pending','retry_wait')",
+                "AND status IN ('needs_review','rejected','failed','pending','retry_wait','deferred')",
                 (candidate_uid,),
             )
         store.finish_run(context.run_id, "success")
