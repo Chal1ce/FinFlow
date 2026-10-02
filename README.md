@@ -17,7 +17,7 @@ PDF、图片、表格和派生文件保存在本地，SQLite 记录任务、版�
 - **采集与导入**：接入巨潮资讯、上交所、Crossref、OpenAlex，也支持手工提供 PDF。
 - **OCR 与治理**：连接 PaddleOCR，完成文本清洗、元数据处理、分块和质量检查。
 - **图片与表格**：保存区域图像，共用一张资产表；保留表格 OCR 结构和多模态描述。
-- **SFT 数据**：从批准的证据生成文档问答、JSON 抽取和表格计算，保留引文、程序计算与独立审核。
+- **SFT 数据**：文档问答、JSON 抽取和表格计算；可选原图问答与表格转 JSON，多模态数据随包保存图片。
 - **预训练数据**：将原文、图表描述及可选翻译/改写送入独立审核，按目标 tokenizer 分段。
 - **自动运行与追溯**：每日增量采集、任务重试、断点恢复、去重、血缘查询及不可变发布。
 - **应用连接**：飞书、Telegram、Discord、Slack 的命令、PDF 导入、图表人工复核和日报；MCP 接口支持外部助手调用。
@@ -93,7 +93,7 @@ python -m workflow.cli list
 | 单独发现来源或下载 PDF | [数据来源与采集](docs/acquisition.md) |
 | 手工处理财报、了解目录和交付内容 | [财报处理与交付](docs/financial-workflow.md) |
 | 调整清洗规则、切片与 LLM 治理 | [清洗与治理](docs/governance.md) |
-| 从 v7 证据生成问答、抽取与表格计算 SFT | [SFT 生成、配置与续作](docs/sft.md) |
+| 从 v7 证据生成文本或多模态 SFT | [文本 SFT](docs/sft.md) · [图表多模态 SFT](docs/sft-vision.md) |
 | 从已有 v5/v6 发布包构建语料 | [已有发布包生成预训练语料](docs/pretraining.md) |
 | 部署或连接 OCR 服务 | [PaddleOCR 部署与连接](docs/paddleocr_remote.md) |
 | 查看日志、备份、恢复和排错 | [日志说明](docs/logging.md) · [运维手册](docs/local_operations.md) |

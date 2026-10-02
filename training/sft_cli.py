@@ -9,7 +9,7 @@ from pathlib import Path
 from config import load_config
 from core.context import PipelineContext
 from storage.flywheel_store import FlywheelStore
-from training.flywheel_corpus import verify
+from training.sft_export import verify_dataset
 from training.sft import SFTBuilder
 from training.sft_config import SFTConfig
 from workflow.flywheel import DailyLock
@@ -36,7 +36,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "verify":
-            result = {"status": "success", "manifest": verify(args.path)}
+            result = {"status": "success", "manifest": verify_dataset(args.path)}
         else:
             config = SFTConfig(args.config)
             source_policy = json.loads(args.flywheel_config.read_text(encoding="utf-8")).get("source_policy", {})

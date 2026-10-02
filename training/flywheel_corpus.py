@@ -167,6 +167,11 @@ class FlywheelCorpusBuilder:
             sft_assignment = self.store.get("sft-content-split", content_hash)
             if sft_assignment:
                 constraints.setdefault(find(work), set()).add(sft_assignment["split"])
+        for visual in self.store.connection.execute("SELECT work_uid,sha256 FROM visual_asset WHERE status='success'"):
+            if visual["work_uid"] in parent:
+                sft_assignment = self.store.get("sft-image-split", visual["sha256"])
+                if sft_assignment:
+                    constraints.setdefault(find(visual["work_uid"]), set()).add(sft_assignment["split"])
         assignments = {}
         for group, works in groups.items():
             choices = constraints.get(group, set())

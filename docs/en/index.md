@@ -29,7 +29,7 @@ collection targets belong in `config/collection.json`, and recipes and budgets i
 | Feishu / Telegram / Discord / Slack or assistant tools | `integrations.cli` | [App integrations and MCP](app-integrations.md) |
 | Process a local PDF or existing financial OCR | `workflow.cli` | [Detailed reference guides](reference.md) |
 | Discover sources or download PDFs separately | Collection and download CLIs | [Detailed reference guides](reference.md) |
-| Generate QA, extraction and calculation SFT from v7 | `training.sft_cli` | [SFT data generation](sft.md) |
+| Generate text and visual SFT from v7 | `training.sft_cli` | [Text SFT](sft.md) · [Visual SFT](sft-vision.md) |
 | Export text from existing v5/v6 releases | `training.cli` | [Existing release export](pretraining.md) |
 
 ## Recommended reading
