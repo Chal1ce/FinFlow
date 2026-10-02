@@ -254,3 +254,11 @@ scheduler operation still require a configured real run. See the
 [environment check](environment-check.md) for the recorded configuration failure.
 Long-running logs need system rotation; cumulative scans and evidence snapshots
 will need batching and retention as the dataset grows.
+
+## 7. Optional SFT stage
+
+Set `"sft": {"enabled": true, "config": "config/sft.local.json"}` in the local flywheel configuration
+to generate QA, JSON extraction and table-calculation SFT after evidence publication and CPT.
+It is disabled by default and requires separate generation/review role configuration; table review needs vision support.
+Daily summaries expose `sft_dataset`. SFT requests are included in the total count; detailed SFT usage is nested there.
+See [SFT data generation](sft.md) for standalone use, formats and resuming. Functional and live-model validation is pending.

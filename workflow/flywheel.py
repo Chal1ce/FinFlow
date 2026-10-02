@@ -163,6 +163,27 @@ class DailyFlywheel:
                     release = publish_evidence(self.root, store, release_id)
                     if accepted:
                         dataset = builder.build("delta-" + context.run_id, release=release)
+                sft_dataset = {"status": "disabled"}
+                if self.config.sft is not None:
+                    sft_dataset = {"status": "no_change"}
+                    if release and accepted:
+                        from training.sft import SFTBuilder
+
+                        sft_builder = SFTBuilder(self.root, store, context, self.config.sft, self.config.policy.get("source_policy", {}))
+                        try:
+                            sft_dataset = sft_builder.build(
+                                "sft-" + context.run_id,
+                                release["release_id"],
+                                max_seconds=max(0, self.config.deadline_seconds - (time.monotonic() - started)),
+                            )
+                        except Exception as exc:
+                            sft_dataset = {
+                                "status": "failed",
+                                "error_type": type(exc).__name__,
+                                "model_requests": sft_builder.client.requests,
+                                "model_usage": sft_builder.client.usage,
+                            }
+                            errors.append({"stage": "sft", "error_type": type(exc).__name__})
                 counts = store.counts()
                 visual_counts = {r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM visual_asset GROUP BY status")}
                 decision_counts = {
@@ -175,8 +196,9 @@ class DailyFlywheel:
                     or pending
                     or counts.get("failed", 0)
                     or dataset.get("split_conflicts")
+                    or sft_dataset["status"] in {"partial", "failed"}
                     or (completed and (counts.get("needs_review", 0) or visual_counts.get("needs_review", 0)))
-                    else ("success" if completed or dataset["status"] != "no_change" else "no_change")
+                    else ("success" if completed or dataset["status"] != "no_change" or sft_dataset.get("samples") else "no_change")
                 )
                 summary = {
                     "status": status,
@@ -188,9 +210,10 @@ class DailyFlywheel:
                     "visuals": visual_counts,
                     "candidates": decision_counts,
                     "dataset": dataset,
+                    "sft_dataset": sft_dataset,
                     "release": release,
                     "errors": errors,
-                    "model_requests": getattr(self.client, "requests", None),
+                    "model_requests": (getattr(self.client, "requests", 0) or 0) + sft_dataset.get("model_requests", 0),
                     "model_usage": getattr(self.client, "usage", None),
                     "elapsed_seconds": round(time.monotonic() - started, 3),
                     "created_at": utc_now(),

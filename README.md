@@ -4,7 +4,7 @@
 
 [中文文档网站](https://chal1ce.github.io/FinFlow/zh/) · [English documentation](https://chal1ce.github.io/FinFlow/en/)
 
-把金融文档转成可追溯的预训练数据。
+把金融文档转成可追溯的预训练与 SFT 数据。
 
 项目自动采集财报、研报与相关论文，串接 OCR、文本与图表治理、多模态描述、
 可选翻译/改写和独立质量审核，再按目标 tokenizer 生成预训练语料。
@@ -17,6 +17,7 @@ PDF、图片、表格和派生文件保存在本地，SQLite 记录任务、版�
 - **采集与导入**：接入巨潮资讯、上交所、Crossref、OpenAlex，也支持手工提供 PDF。
 - **OCR 与治理**：连接 PaddleOCR，完成文本清洗、元数据处理、分块和质量检查。
 - **图片与表格**：保存区域图像，共用一张资产表；保留表格 OCR 结构和多模态描述。
+- **SFT 数据**：从批准的证据生成文档问答、JSON 抽取和表格计算，保留引文、程序计算与独立审核。
 - **预训练数据**：将原文、图表描述及可选翻译/改写送入独立审核，按目标 tokenizer 分段。
 - **自动运行与追溯**：每日增量采集、任务重试、断点恢复、去重、血缘查询及不可变发布。
 - **应用连接**：飞书、Telegram、Discord、Slack 的命令、PDF 导入、图表人工复核和日报；MCP 接口支持外部助手调用。
@@ -33,12 +34,13 @@ flowchart LR
     visual --> candidate
     candidate --> review["独立质量审核"]
     review --> release["证据包与预训练数据"]
+    release --> sft["可选：证据问答 / 抽取 / 计算 SFT"]
     state["SQLite：任务、版本与血缘"] -.-> raw
     state -.-> candidate
     state -.-> release
 ```
 
-每日飞轮生成训练数据文件；模型训练由下游训练程序执行。
+每日飞轮生成训练数据文件；模型训练由下游训练程序执行。SFT 可独立运行或作为每日流程的可选阶段，默认关闭。
 
 ## 快速开始
 
@@ -91,6 +93,7 @@ python -m workflow.cli list
 | 单独发现来源或下载 PDF | [数据来源与采集](docs/acquisition.md) |
 | 手工处理财报、了解目录和交付内容 | [财报处理与交付](docs/financial-workflow.md) |
 | 调整清洗规则、切片与 LLM 治理 | [清洗与治理](docs/governance.md) |
+| 从 v7 证据生成问答、抽取与表格计算 SFT | [SFT 生成、配置与续作](docs/sft.md) |
 | 从已有 v5/v6 发布包构建语料 | [已有发布包生成预训练语料](docs/pretraining.md) |
 | 部署或连接 OCR 服务 | [PaddleOCR 部署与连接](docs/paddleocr_remote.md) |
 | 查看日志、备份、恢复和排错 | [日志说明](docs/logging.md) · [运维手册](docs/local_operations.md) |
@@ -99,7 +102,7 @@ python -m workflow.cli list
 
 ## 项目状态
 
-每日飞轮已实现，迁移公开仓库前 149 项离线测试通过。应用连接为新增实现，目前完成静态检查，尚未实连验收。
+每日飞轮已实现，迁移公开仓库前 149 项离线测试通过。应用连接及 SFT 为新增实现，目前完成静态检查，尚未功能测试或实连验收。
 真实 OCR/模型服务的完整实跑和输出质量仍需在配置后验证；
 定时模板不会自动安装到系统。正式飞轮没有 mock 回退，未确认的来源与质量问题会保留在审核记录中。
 

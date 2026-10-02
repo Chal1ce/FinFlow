@@ -1,0 +1,14 @@
+{
+  "schema_version": "sft-recipe-v1",
+  "tasks": ["document_qa", "extraction", "table_calculation"],
+  "samples_per_task": 2,
+  "max_jobs": 20,
+  "max_model_requests": 40,
+  "max_seconds": 600,
+  "max_evidence_chars": 12000,
+  "max_question_chars": 2000,
+  "max_answer_chars": 6000,
+  "validation_fraction": 0.05,
+  "generation_prompt_version": "evidence-sft-generate-v1",
+  "review_prompt_version": "evidence-sft-review-v1"
+}

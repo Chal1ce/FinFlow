@@ -22,3 +22,10 @@ See [configuration](data-flywheel.md#1-environment-and-models),
 Use `training.cli` to export body-text corpora from existing packages; see
 [Existing release export](pretraining.md). This entry point does not call translation
 or rewriting models and does not use the flywheel's target-tokenizer recipe.
+
+## Supervised fine-tuning data
+
+Approved v7 original text and tables can also generate document QA, structured extraction
+and table-calculation examples. Outputs retain complete messages, evidence, review and lineage
+without CPT-style text segmentation. See [SFT data generation](sft.md) for the standalone CLI,
+daily integration, resumable caches and split limitations.

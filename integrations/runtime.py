@@ -46,6 +46,7 @@ def report_text(report):
             f"\n最近状态：{latest['status']}\n当前候选累计状态：{json.dumps(latest.get('candidates', {}), ensure_ascii=False)}"
             f"\n当前积压：{json.dumps(latest.get('queue', {}), ensure_ascii=False)}"
             f"\n本轮数据集：{json.dumps(latest.get('dataset', {}), ensure_ascii=False)}"
+            f"\nSFT 数据集：{json.dumps(latest.get('sft_dataset', {'status': 'disabled'}), ensure_ascii=False)}"
         )
         if latest.get("errors"):
             text += "\n阶段异常：" + json.dumps(latest["errors"], ensure_ascii=False)[:3000]

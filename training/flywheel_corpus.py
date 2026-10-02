@@ -158,9 +158,15 @@ class FlywheelCorpusBuilder:
             previous_assignment = self.store.get("work-split", stable_uid(self.recipe_uid, work))
             if previous_assignment:
                 constraints.setdefault(group, set()).add(previous_assignment["split"])
+            sft_assignment = self.store.get("sft-work-split", work)
+            if sft_assignment:
+                constraints.setdefault(group, set()).add(sft_assignment["split"])
         for content_hash, work in content_works.items():
             if content_hash in known:
                 constraints.setdefault(find(work), set()).add(known[content_hash]["split"])
+            sft_assignment = self.store.get("sft-content-split", content_hash)
+            if sft_assignment:
+                constraints.setdefault(find(work), set()).add(sft_assignment["split"])
         assignments = {}
         for group, works in groups.items():
             choices = constraints.get(group, set())

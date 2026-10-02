@@ -4,7 +4,7 @@
 
 [Chinese documentation](https://chal1ce.github.io/FinFlow/zh/) · [English documentation](https://chal1ce.github.io/FinFlow/en/)
 
-Turn financial documents into traceable pretraining data.
+Turn financial documents into traceable pretraining and SFT data.
 
 FinFlow connects source discovery, OCR, text and visual governance, multimodal
 descriptions, optional translation/rewriting, and independent quality review.
@@ -18,6 +18,7 @@ pretraining (CPT).
 - PaddleOCR integration, cleaning, metadata normalization, and quality checks.
 - Image/table crops in one asset table, retaining table OCR and visual descriptions.
 - Independent review, target-tokenizer segmentation, and grouped splits.
+- Evidence-grounded SFT: document QA, JSON extraction, table calculations, exact quotations, and independent review.
 - Incremental runs, bounded retries, recovery, deduplication, lineage, immutable releases.
 - Feishu, Telegram, Discord, and Slack commands, PDF imports, human visual review, reports, and MCP tools for assistants.
 
@@ -31,12 +32,14 @@ flowchart LR
     visual --> candidate
     candidate --> review[Independent review]
     review --> release[Evidence and CPT data]
+    release --> sft[Optional QA / extraction / calculation SFT]
     state[SQLite tasks / versions / lineage] -.-> raw
     state -.-> candidate
     state -.-> release
 ```
 
 FinFlow generates training files. A downstream training program trains the model.
+SFT runs independently or as an optional daily stage, disabled by default.
 
 ## Quick start
 
@@ -72,6 +75,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Installation and choosing a workflow | [Quick start](docs/en/quick-start.md) |
 | Models, admission, review, retries, lineage, releases | [Daily data flywheel](docs/en/data-flywheel.md) |
 | Messaging apps or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) · [Telegram](docs/en/app-telegram.md) · [Discord](docs/en/app-discord.md) · [Slack](docs/en/app-slack.md) |
+| QA, extraction and calculation SFT from v7 evidence | [SFT generation and resuming](docs/en/sft.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
 | Actual missing configuration | [Environment check](docs/en/environment-check.md) |
 | Detailed OCR, acquisition, governance, CLI, operations | [Reference guides; detailed pages in Chinese](docs/en/reference.md) |
@@ -81,7 +85,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 ## Project status
 
 149 offline tests passed before the public repository migration. The new application
-integration has passed static checks; live channel/client validation is pending. Real OCR/model
+integration and SFT code have passed static checks; functional tests and live validation are pending. Real OCR/model
 integration and quality still require configured validation. Scheduler templates
 are not installed automatically. The formal flywheel has no mock fallback;
 unconfirmed source usage or quality issues remain reviewable.

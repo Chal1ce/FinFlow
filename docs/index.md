@@ -7,7 +7,7 @@ permalink: /
 # 金融文档治理与训练数据
 
 
-把金融文档转成可追溯的预训练数据：从来源采集、OCR 和图表治理，到模型处理、独立审核与语料发布。
+把金融文档转成可追溯的预训练与 SFT 数据：从来源采集、OCR 和图表治理，到模型处理、独立审核与语料发布。
 
 ![处理流程概览](assets/images/pipeline-overview.svg)
 
@@ -31,6 +31,7 @@ permalink: /
 | 已经采集好财报 | `workflow.cli` 的 `collected_financial` | [运维手册](local_operations.md#22-采集后接管财报) |
 | 已经完成 OCR | `workflow.cli` 的 `govern_and_publish` | [运维手册](local_operations.md#23-治理已有-ocr-输出) |
 | 只想发现来源或下载 PDF | 财报 / 学术采集器、下载器 | [数据来源与采集](acquisition.md) |
+| 从 v7 证据生成问答、抽取和表格计算数据 | `training.sft_cli` | [SFT 数据生成](sft.md) |
 | 从已有 v5/v6 发布包生成文本语料 | `training.cli` | [已有发布包生成预训练语料](pretraining.md) |
 
 ## 推荐阅读顺序
@@ -75,3 +76,5 @@ permalink: /
 传统财报流程输出 v5/v6 发布包，由 `training.cli` 生成模型无关的正文语料。
 每日飞轮输出 v7 证据包，由飞轮构建器执行来源准入、候选审核、目标 tokenizer 分段和训练/验证划分。
 处理 v7 数据时使用飞轮入口，具体文件格式见[发布与训练数据](data-flywheel.md#5-发布与训练数据)。
+
+SFT 使用 `training.sft_cli` 从本机 v7 证据生成指令数据，也可作为每日可选阶段，见 [SFT 数据生成](sft.md)。

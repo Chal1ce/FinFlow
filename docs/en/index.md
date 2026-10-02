@@ -8,7 +8,8 @@ permalink: /
 
 FinFlow collects financial disclosures and related papers, runs OCR and governance,
 stores images and tables, generates multimodal descriptions, and publishes reviewed
-text for continual pretraining (CPT). SQLite tracks tasks, versions, and lineage.
+text for continual pretraining (CPT), with optional evidence-grounded SFT generation.
+SQLite tracks tasks, versions, and lineage.
 
 ![Pipeline overview; labels are in Chinese](../assets/images/pipeline-overview.svg)
 
@@ -28,6 +29,7 @@ collection targets belong in `config/collection.json`, and recipes and budgets i
 | Feishu / Telegram / Discord / Slack or assistant tools | `integrations.cli` | [App integrations and MCP](app-integrations.md) |
 | Process a local PDF or existing financial OCR | `workflow.cli` | [Detailed reference guides](reference.md) |
 | Discover sources or download PDFs separately | Collection and download CLIs | [Detailed reference guides](reference.md) |
+| Generate QA, extraction and calculation SFT from v7 | `training.sft_cli` | [SFT data generation](sft.md) |
 | Export text from existing v5/v6 releases | `training.cli` | [Existing release export](pretraining.md) |
 
 ## Recommended reading
