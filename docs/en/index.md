@@ -25,7 +25,7 @@ collection targets belong in `config/collection.json`, and recipes and budgets i
 | Goal | Entry point | Guide |
 | --- | --- | --- |
 | Daily collection, visual processing, and CPT export | `workflow.flywheel_cli` | [Daily data flywheel](data-flywheel.md) |
-| Feishu operations or external assistant tools | `integrations.cli` | [App integrations and MCP](app-integrations.md) |
+| Feishu / Telegram / Discord / Slack or assistant tools | `integrations.cli` | [App integrations and MCP](app-integrations.md) |
 | Process a local PDF or existing financial OCR | `workflow.cli` | [Detailed reference guides](reference.md) |
 | Discover sources or download PDFs separately | Collection and download CLIs | [Detailed reference guides](reference.md) |
 | Export text from existing v5/v6 releases | `training.cli` | [Existing release export](pretraining.md) |

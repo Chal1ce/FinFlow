@@ -57,6 +57,7 @@ class IntegrationStore:
             CREATE TABLE IF NOT EXISTS app_audit(
                 id INTEGER PRIMARY KEY, actor_id TEXT NOT NULL, action TEXT NOT NULL,
                 resource TEXT NOT NULL, outcome TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS app_cursor(cursor_key TEXT PRIMARY KEY, value TEXT NOT NULL);
         """)
 
     def __enter__(self):
@@ -173,7 +174,7 @@ class IntegrationStore:
             f"SELECT * FROM {table} WHERE status='pending' AND available_at<=? ORDER BY rowid LIMIT 1", (time.time(),)
         ).fetchone()
 
-    def fail_item(self, table, key, error_type):
+    def fail_item(self, table, key, error_type, *, retry_after=0):
         if table not in {"app_event", "app_outbox"}:
             raise ValueError("invalid queue")
         column = "event_key" if table == "app_event" else "delivery_id"
@@ -182,5 +183,11 @@ class IntegrationStore:
         with self.db:
             self.db.execute(
                 f"UPDATE {table} SET attempts=?,status=?,available_at=?,error_type=? WHERE {column}=?",
-                (attempts, "failed" if attempts >= 5 else "pending", time.time() + min(3600, 5 * 2**attempts), error_type, key),
+                (
+                    attempts,
+                    "failed" if attempts >= 5 else "pending",
+                    time.time() + max(retry_after, min(3600, 5 * 2**attempts)),
+                    error_type,
+                    key,
+                ),
             )

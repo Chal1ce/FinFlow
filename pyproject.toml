@@ -20,6 +20,8 @@ dependencies = [
 
 [project.optional-dependencies]
 feishu = ["lark-oapi>=1.5,<2"]
+discord = ["discord.py>=2.4,<3"]
+slack = ["slack-sdk>=3.33,<4"]
 mcp = ["mcp>=1.28,<2"]
 dev = [
   "pytest>=8.0",
