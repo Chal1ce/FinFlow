@@ -5,7 +5,7 @@ nav_order: 5
 
 # Training data
 
-FinFlow creates text training files. Your downstream training program trains the model.
+FinFlow creates training files. Your downstream program trains the target model. Explicit DoReMi/RegMix commands also train small proxies to learn mixture weights.
 
 ## Daily v7 flywheel outputs
 
@@ -35,3 +35,9 @@ daily integration, resumable caches and split limitations.
 Optional `config/sft-vision.json` supports visual QA and table-image-to-JSON transcription.
 Exports package original images, typed messages and visual evidence metadata, with separate text/vision training files.
 See [Visual SFT](sft-vision.md).
+
+## Methods and mixtures
+
+- [Generation methods](training-methods.md): CPT knowledge transformations, multi-step SFT and visual conversations.
+- [Data mixtures and selection](data-mixtures.md): fixed/temperature quotas, family caps, quality/diversity selection and actual proportions.
+- [DoReMi / RegMix](mixture-experiments.md): domain preparation, real local proxy training, resume and learned weights.

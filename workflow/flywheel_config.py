@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from config import load_config
+from training.cpt_methods import TRANSFORMS
 
 
 def digest(value: object) -> str:
@@ -85,7 +86,10 @@ class FlywheelConfig:
             raise ValueError("FIN_DOC_FLYWHEEL_OCR_OPTIONS must be an object")
         self.ocr_options = {**configured_options, **self.policy.get("ocr_options", {}), **override}
         self.methods = self.policy.get("methods", ["original", "visual"])
-        self.roles = {role: ModelRole.load(role) for role in ("vision", "translate", "rewrite", "review", "govern")}
+        roles = ["vision", "translate", "rewrite", "review", "govern"]
+        if set(self.methods) & TRANSFORMS.keys():
+            roles.append("synthesize")
+        self.roles = {role: ModelRole.load(role) for role in roles}
         requested_governance = self.policy.get("governance_backend", "none")
         self.governance_backend = (
             ("openai" if self.roles["govern"].key else "none") if requested_governance == "auto" else requested_governance
@@ -136,6 +140,8 @@ class FlywheelConfig:
             errors.append("PADDLEOCR cloud token is required")
         required = {"review"} | ({"vision"} if "visual" in self.methods else set())
         required |= set(self.methods) & {"translate", "rewrite"}
+        if set(self.methods) & TRANSFORMS.keys():
+            required.add("synthesize")
         if self.governance_backend == "openai":
             required.add("govern")
         elif self.governance_backend != "none":
@@ -165,7 +171,7 @@ class FlywheelConfig:
             or self.model_limit < 1
         ):
             errors.append("pipeline limits are invalid")
-        if not set(self.methods) <= {"original", "visual", "translate", "rewrite"}:
+        if not set(self.methods) <= {"original", "visual", "translate", "rewrite", *TRANSFORMS}:
             errors.append("unknown candidate method")
         if not self.methods:
             errors.append("enable at least one candidate method")

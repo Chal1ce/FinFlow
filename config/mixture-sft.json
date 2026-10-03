@@ -1,0 +1,13 @@
+{
+  "schema_version": "finflow-mixture-v1",
+  "inputs": ["data/training/sft/datasets/sft-text", "data/training/sft/datasets/sft-vision"],
+  "group_fields": ["task"],
+  "method": "temperature",
+  "alpha": 0.5,
+  "unit": "samples",
+  "budget": 1000,
+  "seed": 42,
+  "max_per_family": 20,
+  "redistribute": false,
+  "allow_shortfall": false
+}

@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mixture-training = ["torch>=2.6,<3", "numpy>=1.26,<3", "lightgbm>=4.3,<5"]
 feishu = ["lark-oapi>=1.5,<2"]
 discord = ["discord.py>=2.4,<3"]
 slack = ["slack-sdk>=3.33,<4"]

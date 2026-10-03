@@ -177,3 +177,7 @@ The default is `enabled=false`; this feature does not install scheduling or call
 The first three text-SFT recipes, resumable caches, arithmetic checks, independent review, shared splits
 and artifact lineage are implemented. Static checks and documentation builds are not functional tests
 or real-model acceptance. Those validations have not yet been performed for the new SFT implementation.
+
+## Additional generation strategies
+
+Direct generation remains the default. Optional grounded Self-Instruct, answer-first, Evol-Instruct and CodecLM workflows are documented in [Generation methods](training-methods.md). See also [Data mixtures](data-mixtures.md).

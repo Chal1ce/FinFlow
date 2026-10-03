@@ -149,3 +149,7 @@ New text/vision exports remain cumulative snapshots, so successive resume snapsh
 Visual generation, original-image review, region metadata, portable image exports, PIL loading and extended
 verification are implemented. Functional tests, real-model acceptance and downstream VLM training have not run.
 No live or paid model requests were made during implementation.
+
+## Descriptions and conversations
+
+`config/sft-vision-methods.json` also enables visual_description and visual_conversation; see [Generation methods](training-methods.md). Only the first user message contains the image placeholder; later turns share that image. Original images remain packaged.

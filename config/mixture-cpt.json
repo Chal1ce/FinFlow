@@ -1,0 +1,13 @@
+{
+  "schema_version": "finflow-mixture-v1",
+  "inputs": ["data/training/snapshots/cpt-all"],
+  "group_fields": ["source_name"],
+  "method": "temperature",
+  "alpha": 0.5,
+  "unit": "tokens",
+  "budget": 1000000,
+  "seed": 42,
+  "max_per_family": 100,
+  "redistribute": false,
+  "allow_shortfall": false
+}

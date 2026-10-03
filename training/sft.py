@@ -17,11 +17,12 @@ from processing.visual_description import ModelBudgetExceeded, RoleClient
 from storage.state_store import utc_now
 from training.flywheel_corpus import checksums, jsonl, read_jsonl, verify
 from training.pretrain import redact_direct_contacts
-from training import sft_vision
+from training import sft_vision, sft_strategies
 from training.sft_config import VISION_TASKS, task_supports
 from training.sft_export import export_files, inspect_image, sample_hash, verify_dataset
 from training.sft_recipes import generation_prompt, normalize_sample, parse_object, review_decision, review_prompt
 from training.sft_splits import assign_splits
+from training.method_cards import CARDS
 from workflow.flywheel_config import digest
 
 
@@ -155,7 +156,7 @@ class SFTBuilder:
         self.store.put("sft-response", identity, {"sha256": sha256(path)})
         return response, artifact
 
-    def _generate_job(self, task, evidence, job_uid):
+    def _generate_job(self, task, evidence, job_uid, strategy="direct"):
         existing = self.store.get("sft-job", job_uid)
         if existing:
             path = safe_path(self.root, existing["path"])
@@ -164,6 +165,7 @@ class SFTBuilder:
             result = json.loads(path.read_text(encoding="utf-8"))
             artifact_ids = {sample["artifact_uid"] for sample in result["samples"]}
             artifact_ids.update(sample["generation_artifact_uid"] for sample in result["samples"])
+            artifact_ids.update(stage["artifact_uid"] for stage in result.get("stages", []))
             artifact_ids.update(entry["artifact_uid"] for entry in result["audit"] if entry.get("artifact_uid"))
             for uid in artifact_ids:
                 record = self.store.connection.execute("SELECT path,sha256 FROM artifact WHERE artifact_uid=?", (uid,)).fetchone()
@@ -171,24 +173,31 @@ class SFTBuilder:
                     raise ValueError("SFT cached artifact checksum mismatch")
             return result
         vision = task in VISION_TASKS
-        prompt = (sft_vision.generation_prompt if vision else generation_prompt)(task, evidence, self.config)
-        response, generated_artifact = self._model(
-            "sft_vision_generate" if vision else "sft_generate", prompt, evidence["parents"], evidence=evidence if vision else None
-        )
-        samples, audit = [], []
-        parents = [*evidence["parents"], generated_artifact]
-        try:
-            raw = parse_object(response).get("samples")
-            limit = 1 if task == "table_structure" else self.config.policy.get("samples_per_task", 2)
-            if not isinstance(raw, list) or len(raw) > limit:
-                raise ValueError("invalid_sample_count")
-        except (ValueError, KeyError, IndexError, TypeError):
-            raw = []
-            audit.append({"status": "needs_review", "reason": "invalid_generation_response", "artifact_uid": generated_artifact})
-        if not raw and not audit:
+        samples, audit, stages = [], [], []
+        if strategy == "direct":
+            prompt = (sft_vision.generation_prompt if vision else generation_prompt)(task, evidence, self.config)
+            response, generated_artifact = self._model(
+                "sft_vision_generate" if vision else "sft_generate", prompt, evidence["parents"], evidence=evidence if vision else None
+            )
+            parents = [*evidence["parents"], generated_artifact]
+            try:
+                raw = parse_object(response).get("samples")
+                limit = 1 if task == "table_structure" else self.config.policy.get("samples_per_task", 2)
+                if not isinstance(raw, list) or len(raw) > limit:
+                    raise ValueError("invalid_sample_count")
+            except (ValueError, KeyError, IndexError, TypeError):
+                raw = []
+                audit.append({"status": "needs_review", "reason": "invalid_generation_response", "artifact_uid": generated_artifact})
+            candidates = [{"raw": r, "generation_artifact_uid": generated_artifact, "strategy": strategy} for r in raw]
+        else:
+            candidates, stages, audit = sft_strategies.generate(self, task, evidence, strategy)
+            parents = [*evidence["parents"], *[s["artifact_uid"] for s in stages]]
+        if not candidates and not audit:
             audit.append({"status": "skipped", "reason": "generator_found_no_supported_samples"})
         seen = set()
-        for index, item in enumerate(raw):
+        for index, candidate in enumerate(candidates):
+            item = candidate["raw"]
+            generated_artifact = candidate["generation_artifact_uid"]
             try:
                 sample = (sft_vision.normalize_sample if vision else normalize_sample)(task, item, evidence, self.config)
             except (ValueError, KeyError, TypeError):
@@ -216,6 +225,9 @@ class SFTBuilder:
                 "modality": "vision" if vision else "text",
                 "sample_id": sample_uid,
                 "synthetic": True,
+                "strategy": strategy,
+                "strategy_stages": stages,
+                "source": evidence["source"],
                 "split": evidence["split"],
                 "recipe_uid": self.config.version,
                 "evidence_uid": evidence["evidence_uid"],
@@ -236,7 +248,15 @@ class SFTBuilder:
             sample = {**sample, "artifact_uid": artifact}
             self.store.put("sft-sample", sample_uid, sample)
             samples.append(sample)
-        result = {"job_uid": job_uid, "task": task, "evidence_uid": evidence["evidence_uid"], "samples": samples, "audit": audit}
+        result = {
+            "job_uid": job_uid,
+            "task": task,
+            "strategy": strategy,
+            "stages": stages,
+            "evidence_uid": evidence["evidence_uid"],
+            "samples": samples,
+            "audit": audit,
+        }
         path = self.root / "training" / "sft" / "jobs" / f"{job_uid}.json"
         write_json(path, result)
         artifact = register_file(
@@ -279,16 +299,22 @@ class SFTBuilder:
             if item["split"] is None:
                 audit.append({"evidence_uid": item["evidence_uid"], "status": "needs_review", "reason": "split_conflict"})
                 continue
-            for task in self.config.policy["tasks"]:
+            combinations = [
+                (task, strategy)
+                for task in self.config.policy["tasks"]
+                for strategy in self.config.policy.get("strategies", ["direct"])
+                if sft_strategies.supported(strategy, task)
+            ]
+            for task, strategy in combinations:
                 if not task_supports(task, item["kind"]):
                     continue
-                job_uid = stable_uid("sft-job-v1", self.config.version, item["evidence_uid"], item["split"], task)
+                job_uid = stable_uid("sft-job-v2", self.config.version, item["evidence_uid"], item["split"], task, strategy)
                 cached = self.store.get("sft-job", job_uid)
                 if not cached and (stopped or completed >= self.config.policy.get("max_jobs", 20) or time.monotonic() - started >= seconds):
                     pending += 1
                     continue
                 try:
-                    result = self._generate_job(task, item, job_uid)
+                    result = self._generate_job(task, item, job_uid, strategy)
                 except ModelBudgetExceeded:
                     stopped = True
                     pending += 1
@@ -329,11 +355,13 @@ class SFTBuilder:
             "status": status,
             "recipe_uid": self.config.version,
             "recipe": self.config.policy,
+            "method_cards": {k: CARDS[k] for k in self.config.policy.get("strategies", []) if k in CARDS},
             "models": {k: v.identity() for k, v in self.config.roles.items()},
             "release": release_record,
             "source_policy_sha256": digest(self.source_policy),
             "samples": len(samples),
             "tasks": dict(counts),
+            "strategies": dict(Counter(s.get("strategy", "direct") for s in samples.values())),
             "splits": dict(Counter(s["split"] for s in samples.values())),
             "completed_jobs": completed,
             "pending_jobs": pending,

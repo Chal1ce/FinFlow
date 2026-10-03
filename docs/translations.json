@@ -19,6 +19,10 @@
     "source_sha256": "1bea2a120c7daa6a66dc0feea4197a90f7c2fd252a39aec057e355eb3264b3f3",
     "coverage": "summary"
   },
+  "data-mixtures": {
+    "source_sha256": "db483f6698cfaf0c5b3da22c214211448626ad5ae72adf821630ec0791cca4ed",
+    "coverage": "full"
+  },
   "docs-authoring": {
     "source_sha256": "fd5261d00718de45fd6c8bb882bcdcf5531b60c1ebf70a0731781dfa38bcec82",
     "coverage": "full"
@@ -32,8 +36,12 @@
     "coverage": "full"
   },
   "index": {
-    "source_sha256": "e2b76abacf288e14028178a36947f7565ceb8419dba5701b7fcef48ee01f762a",
+    "source_sha256": "1a21647d649ed9364584582df3fa8937fc648cad37fa1e88aa52a97f4f38a4c9",
     "coverage": "summary"
+  },
+  "mixture-experiments": {
+    "source_sha256": "dba55d87bd7e9bc4788be163d55bb270023101c8d27dd59fa4007366a9130660",
+    "coverage": "full"
   },
   "pretraining": {
     "source_sha256": "94bdbe1a7e3313b19c0f1de159caa98ca1b1630c6987265f0ed95651609cad80",
@@ -48,15 +56,19 @@
     "coverage": "summary"
   },
   "sft": {
-    "source_sha256": "67ea788b70668156e3200776fa5dacaf5a2f6183da0ec6cf7597ce7159b91215",
+    "source_sha256": "9293bb8fca779f731aa91f816d21ae1b8976e1208462a41b30e1e6a114693c95",
     "coverage": "full"
   },
   "sft-vision": {
-    "source_sha256": "1c6c9fa151b0174c9d540487fc0ebb3a5e37714137d338bd546233faec39a615",
+    "source_sha256": "3ed380a0e62f222c772699f4b9b049c8d4798e813410ed89e3f4c495895720b4",
     "coverage": "full"
   },
   "training-data": {
-    "source_sha256": "5d59aefae2c5e693e30c07bfdc3258dda9e8226fce3d780daf55d8817c5b4d8f",
+    "source_sha256": "852a70e162c2df3345875a9ec8893a7cfd09ff6c391050620bb2df72ba276b64",
+    "coverage": "full"
+  },
+  "training-methods": {
+    "source_sha256": "4f73182888d8db84d2afe22c42da1fce87850e484cd5e5831483048660dc60c4",
     "coverage": "full"
   }
 }

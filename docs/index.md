@@ -32,6 +32,7 @@ permalink: /
 | 已经完成 OCR | `workflow.cli` 的 `govern_and_publish` | [运维手册](local_operations.md#23-治理已有-ocr-输出) |
 | 只想发现来源或下载 PDF | 财报 / 学术采集器、下载器 | [数据来源与采集](acquisition.md) |
 | 从 v7 证据生成文本与多模态指令数据 | `training.sft_cli` | [文本 SFT](sft.md) · [图表多模态 SFT](sft-vision.md) |
+| 扩展生成方法、控制比例和学习配比 | `training.mixture_cli` / `training.mixture_experiments` | [方法库](training-methods.md) · [数据配比](data-mixtures.md) · [DoReMi / RegMix](mixture-experiments.md) |
 | 从已有 v5/v6 发布包生成文本语料 | `training.cli` | [已有发布包生成预训练语料](pretraining.md) |
 
 ## 推荐阅读顺序

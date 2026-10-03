@@ -9,9 +9,10 @@ from urllib.parse import urlsplit
 
 from config import load_config
 from workflow.flywheel_config import ModelRole, digest
+from training.sft_strategies import STRATEGIES, supported
 
 TEXT_TASKS = {"document_qa", "extraction", "table_calculation"}
-VISION_TASKS = {"visual_qa", "table_structure"}
+VISION_TASKS = {"visual_qa", "table_structure", "visual_description", "visual_conversation"}
 TASKS = TEXT_TASKS | VISION_TASKS
 
 
@@ -24,6 +25,8 @@ def task_supports(task, kind):
             "table_calculation": {"table"},
             "visual_qa": {"image", "table"},
             "table_structure": {"table"},
+            "visual_description": {"image", "table"},
+            "visual_conversation": {"image", "table"},
         }[task]
     )
 
@@ -43,9 +46,11 @@ class SFTConfig:
             roles.extend(("sft_generate", "sft_review"))
         if VISION_TASKS.intersection(tasks):
             roles.extend(("sft_vision_generate", "sft_vision_review"))
+        if self.policy.get("contrastive_filter", False):
+            roles.append("sft_target")
         self.roles = {role: ModelRole.load(role) for role in roles}
         self.model_limit = self.policy.get("max_model_requests", 40)
-        self.version = digest({"policy": self.policy, "models": {k: v.identity() for k, v in self.roles.items()}, "engine": "sft-v2"})
+        self.version = digest({"policy": self.policy, "models": {k: v.identity() for k, v in self.roles.items()}, "engine": "sft-v3"})
 
     def preflight(self):
         errors = []
@@ -56,6 +61,33 @@ class SFTConfig:
             errors.append("tasks must be a nonempty list selected from: " + ", ".join(sorted(TASKS)))
         elif len(set(tasks)) != len(tasks):
             errors.append("tasks must not contain duplicates")
+        strategies = self.policy.get("strategies", ["direct"])
+        if (
+            not isinstance(strategies, list)
+            or not strategies
+            or any(not isinstance(s, str) or s not in STRATEGIES for s in strategies)
+            or len(set(strategies)) != len(strategies)
+        ):
+            errors.append("strategies must be unique names from: " + ", ".join(sorted(STRATEGIES)))
+        elif any(not any(supported(s, task) for task in tasks) for s in strategies):
+            errors.append("non-direct strategies require document_qa")
+        elif any(not any(supported(s, task) for s in strategies) for task in tasks):
+            errors.append("every task must have a compatible strategy; use direct for non-QA tasks")
+        seeds = self.policy.get("seed_instructions")
+        if seeds is not None and (
+            not isinstance(seeds, list)
+            or not 1 <= len(seeds) <= 100
+            or any(not isinstance(s, str) or not s.strip() or len(s) > 2000 for s in seeds)
+        ):
+            errors.append("seed_instructions must contain 1..100 nonempty strings (max 2000 characters)")
+        if type(self.policy.get("strategy_seed", 42)) is not int:
+            errors.append("strategy_seed must be an integer")
+        if self.policy.get("max_conversation_turns", 4) == 1:
+            errors.append("max_conversation_turns must be in [2,8]")
+        if type(self.policy.get("contrastive_filter", False)) is not bool:
+            errors.append("contrastive_filter must be boolean")
+        if self.policy.get("contrastive_filter") and (not isinstance(strategies, list) or "codeclm" not in strategies):
+            errors.append("contrastive_filter requires the codeclm strategy")
         for name, default, upper in (
             ("max_jobs", 20, 10000),
             ("max_model_requests", 40, 100000),
@@ -68,6 +100,9 @@ class SFTConfig:
             ("max_table_rows", 50, 500),
             ("max_table_columns", 20, 100),
             ("max_table_cells", 500, 10000),
+            ("evolution_rounds", 2, 5),
+            ("contrastive_min_gap", 1, 5),
+            ("max_conversation_turns", 4, 8),
         ):
             value = self.policy.get(name, default)
             if type(value) is not int or not 1 <= value <= upper:

@@ -1,0 +1,19 @@
+{
+  "schema_version": "sft-recipe-v1",
+  "tasks": ["document_qa", "extraction", "table_calculation"],
+  "strategies": ["direct", "self_instruct", "answer_first", "evol_instruct", "codeclm"],
+  "strategy_seed": 42,
+  "evolution_rounds": 2,
+  "contrastive_filter": false,
+  "contrastive_min_gap": 1,
+  "samples_per_task": 2,
+  "max_jobs": 20,
+  "max_model_requests": 120,
+  "max_seconds": 1200,
+  "max_evidence_chars": 12000,
+  "max_question_chars": 2000,
+  "max_answer_chars": 6000,
+  "validation_fraction": 0.05,
+  "generation_prompt_version": "evidence-sft-strategies-v1",
+  "review_prompt_version": "evidence-sft-review-v1"
+}

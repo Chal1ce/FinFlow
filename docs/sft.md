@@ -167,3 +167,7 @@ SFT 失败会令本轮状态为 `partial`，已发布的 CPT 数据保留。
 
 实现了第一阶段三类文本 SFT、缓存续作、程序计算、独立审核、共享划分和工件血缘。
 静态检查与文档构建检查不代表功能测试或真实模型验收；当前新增 SFT 尚未进行这些验收。
+
+## 更多生成策略
+
+默认使用 direct；可选 Self-Instruct、答案反推、Evol-Instruct 和 CodecLM 的证据适配流程。见[生成方法](training-methods.md)及[数据配比](data-mixtures.md)。

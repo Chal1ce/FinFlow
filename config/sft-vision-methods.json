@@ -1,0 +1,21 @@
+{
+  "schema_version": "sft-recipe-v1",
+  "tasks": ["visual_qa", "table_structure", "visual_description", "visual_conversation"],
+  "strategies": ["direct"],
+  "samples_per_task": 2,
+  "max_conversation_turns": 4,
+  "max_jobs": 20,
+  "max_model_requests": 60,
+  "max_seconds": 900,
+  "max_evidence_chars": 12000,
+  "max_question_chars": 2000,
+  "max_answer_chars": 6000,
+  "max_image_bytes": 10485760,
+  "max_image_pixels": 40000000,
+  "max_table_rows": 50,
+  "max_table_columns": 20,
+  "max_table_cells": 500,
+  "validation_fraction": 0.05,
+  "generation_prompt_version": "image-sft-methods-v1",
+  "review_prompt_version": "image-sft-review-v1"
+}

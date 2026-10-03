@@ -19,6 +19,8 @@ pretraining (CPT).
 - Image/table crops in one asset table, retaining table OCR and visual descriptions.
 - Independent review, target-tokenizer segmentation, and grouped splits.
 - Evidence-grounded SFT: document QA, extraction and calculations; optional visual QA and table transcription with packaged images.
+- Generation methods and mixtures: knowledge transformations; grounded Self-Instruct, answer-first, Evol-Instruct and CodecLM;
+  visual descriptions/conversations; fixed/temperature mixtures and local DoReMi/RegMix proxy experiments.
 - Incremental runs, bounded retries, recovery, deduplication, lineage, immutable releases.
 - Feishu, Telegram, Discord, and Slack commands, PDF imports, human visual review, reports, and MCP tools for assistants.
 
@@ -38,7 +40,8 @@ flowchart LR
     state -.-> release
 ```
 
-FinFlow generates training files. A downstream training program trains the model.
+FinFlow generates training files. A downstream training program trains the target model.
+DoReMi/RegMix run explicitly requested small proxy experiments to learn mixtures; daily jobs never launch them automatically.
 SFT runs independently or as an optional daily stage, disabled by default.
 
 ## Quick start
@@ -76,6 +79,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Models, admission, review, retries, lineage, releases | [Daily data flywheel](docs/en/data-flywheel.md) |
 | Messaging apps or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) · [Telegram](docs/en/app-telegram.md) · [Discord](docs/en/app-discord.md) · [Slack](docs/en/app-slack.md) |
 | Text or visual SFT from v7 evidence | [Text SFT](docs/en/sft.md) · [Visual SFT](docs/en/sft-vision.md) |
+| Generation methods and learned mixtures | [Methods](docs/en/training-methods.md) · [Mixtures](docs/en/data-mixtures.md) · [DoReMi / RegMix](docs/en/mixture-experiments.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
 | Actual missing configuration | [Environment check](docs/en/environment-check.md) |
 | Detailed OCR, acquisition, governance, CLI, operations | [Reference guides; detailed pages in Chinese](docs/en/reference.md) |
@@ -85,10 +89,12 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 ## Project status
 
 149 offline tests passed before the public repository migration. The new application
-integration and SFT code have passed static checks; functional tests and live validation are pending. Real OCR/model
+integration, SFT and method/mixture code have passed static checks; functional tests and live validation are pending. Real OCR/model
 integration and quality still require configured validation. Scheduler templates
 are not installed automatically. The formal flywheel has no mock fallback;
 unconfirmed source usage or quality issues remain reviewable.
+
+DoReMi/RegMix workflows are algorithm adaptations; FinFlow has no real-corpus proxy results or reproduced paper scores yet.
 
 Development commands:
 
