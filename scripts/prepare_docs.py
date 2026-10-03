@@ -100,6 +100,11 @@ def finalize(baseurl: str) -> None:
         (site / f"{path.stem}.html").write_text(
             redirect(f"{baseurl}/zh{page_url(path.stem)}"), encoding="utf-8"
         )
+    site_root = DOCS / "site-root"
+    if site_root.is_dir():
+        for path in site_root.iterdir():
+            if path.is_file():
+                shutil.copy2(path, site / path.name)
     (site / ".nojekyll").touch()
 
 
