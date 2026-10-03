@@ -198,6 +198,11 @@ def test_daily_end_to_end_no_model_calls_on_replay(tmp_path):
     result = DailyFlywheel(config, client=client).run(discover=False)
     assert result["errors"] == []
     assert result["dataset"]["samples"] > 0
+    report = result["quality_reports"]["cpt"]
+    assert report["status"] == "success"
+    assert report["metrics"]["samples"] == result["dataset"]["samples"]
+    assert verify(report["path"])["schema_version"] == "finflow-quality-report-v1"
+    assert result["quality_reports"]["sft"]["status"] == "not_available"
     dataset = Path(result["dataset"]["path"])
     manifest = verify(dataset)
     release = config.root / manifest["release"]["path"]

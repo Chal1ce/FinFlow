@@ -22,6 +22,7 @@ pretraining (CPT).
 - Generation methods and mixtures: knowledge transformations; grounded Self-Instruct, answer-first, Evol-Instruct and CodecLM;
   visual descriptions/conversations; fixed/temperature mixtures and local DoReMi/RegMix proxy experiments.
 - Incremental runs, bounded retries, recovery, deduplication, lineage, immutable releases.
+- Automatic CPT/SFT quality and coverage reports, coverage gaps and version comparisons: [report guide](docs/en/quality-report.md).
 - Feishu, Telegram, Discord, and Slack commands, PDF imports, human visual review, reports, and MCP tools for assistants.
 
 ```mermaid

@@ -189,6 +189,13 @@ class DailyFlywheel:
                 decision_counts = {
                     r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM training_candidate GROUP BY status")
                 }
+                from training.quality_report import daily_reports
+
+                reports = daily_reports(self.root, context.run_id, {"cpt": dataset, "sft": sft_dataset})
+                errors.extend(
+                    {"stage": "quality_report_" + name, "error_type": result["error_type"]}
+                    for name, result in reports.items() if result["status"] == "failed"
+                )
                 pending = sum(counts.get(s, 0) for s in ("pending", "running", "retry_wait", "deferred"))
                 status = (
                     "partial"
@@ -211,6 +218,7 @@ class DailyFlywheel:
                     "candidates": decision_counts,
                     "dataset": dataset,
                     "sft_dataset": sft_dataset,
+                    "quality_reports": reports,
                     "release": release,
                     "errors": errors,
                     "model_requests": (getattr(self.client, "requests", 0) or 0) + sft_dataset.get("model_requests", 0),
