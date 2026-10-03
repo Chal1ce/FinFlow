@@ -51,6 +51,10 @@
     "source_sha256": "ba5a6a66c9058f661aa16b804726939ae741d1ba78069c77a98e0369702cb2a0",
     "coverage": "full"
   },
+  "quality-report": {
+    "source_sha256": "0ae2eb973286e84696bc8bc326903b72b8ef1649eda5e3b49249816f0e10b67c",
+    "coverage": "full"
+  },
   "reference": {
     "source_sha256": "a5b62cb8975cc2c2fb889d0c2f5f2bb861900c9ada194b470636a347a46b0d98",
     "coverage": "summary"

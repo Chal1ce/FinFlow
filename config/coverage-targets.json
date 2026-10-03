@@ -1,0 +1,5 @@
+[
+  {"field": "task", "label": "document_qa", "min_samples": 100},
+  {"field": "task", "label": "table_calculation", "min_samples": 100},
+  {"field": "modality", "label": "vision", "min_samples": 50}
+]
