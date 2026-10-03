@@ -1,0 +1,12 @@
+{
+  "schema_version": "finflow-mixture-v1",
+  "inputs": ["data/training/snapshots/cpt-all"],
+  "group_fields": ["source_name"],
+  "method": "doremi",
+  "weights_file": "data/experiments/doremi-001/weights.json",
+  "unit": "tokens",
+  "budget": 1000000,
+  "seed": 42,
+  "redistribute": false,
+  "allow_shortfall": false
+}

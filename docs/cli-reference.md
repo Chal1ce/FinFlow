@@ -511,3 +511,9 @@ python -m pip install -e ".[dev]"
 python -m unittest discover -s tests -v
 python -m ruff check .
 ```
+
+## 训练方法与配比入口
+
+`training.sft_cli` 可使用 `config/sft-methods.json` 和 `config/sft-vision-methods.json`。
+`training.mixture_cli --config PATH plan|build` 提供数据配比，`training.mixture_experiments --config PATH preflight|prepare|doremi|regmix` 提供显式代理实验。
+详见[生成方法](training-methods.md)、[配比参数与导出](data-mixtures.md)、[DoReMi / RegMix](mixture-experiments.md)。

@@ -81,7 +81,13 @@ def export_files(root, staging, samples, evidence):
 
 def validate_messages(row, vision):
     messages = row.get("messages")
-    if not isinstance(messages, list) or [m.get("role") for m in messages] != ["system", "user", "assistant"]:
+    if (
+        not isinstance(messages, list)
+        or not 3 <= len(messages) <= (17 if vision else 3)
+        or len(messages) % 2 != 1
+        or any(not isinstance(m, dict) for m in messages)
+        or [m.get("role") for m in messages] != ["system", *[r for _ in range((len(messages) - 1) // 2) for r in ("user", "assistant")]]
+    ):
         raise ValueError("invalid_export_messages")
     placeholders = 0
     for message in messages:

@@ -30,6 +30,7 @@ collection targets belong in `config/collection.json`, and recipes and budgets i
 | Process a local PDF or existing financial OCR | `workflow.cli` | [Detailed reference guides](reference.md) |
 | Discover sources or download PDFs separately | Collection and download CLIs | [Detailed reference guides](reference.md) |
 | Generate text and visual SFT from v7 | `training.sft_cli` | [Text SFT](sft.md) · [Visual SFT](sft-vision.md) |
+| Generation strategies and learned mixtures | `training.mixture_cli` / `training.mixture_experiments` | [Methods](training-methods.md) · [Mixtures](data-mixtures.md) · [DoReMi / RegMix](mixture-experiments.md) |
 | Export text from existing v5/v6 releases | `training.cli` | [Existing release export](pretraining.md) |
 
 ## Recommended reading

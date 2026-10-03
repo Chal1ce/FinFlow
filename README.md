@@ -19,6 +19,7 @@ PDF、图片、表格和派生文件保存在本地，SQLite 记录任务、版�
 - **图片与表格**：保存区域图像，共用一张资产表；保留表格 OCR 结构和多模态描述。
 - **SFT 数据**：文档问答、JSON 抽取和表格计算；可选原图问答与表格转 JSON，多模态数据随包保存图片。
 - **预训练数据**：将原文、图表描述及可选翻译/改写送入独立审核，按目标 tokenizer 分段。
+- **生成方法与配比**：知识提炼、教材化与事实列表；Self-Instruct、答案反推、Evol-Instruct、CodecLM 证据适配，图像描述及多轮问答；固定/温度配比与 DoReMi、RegMix 本地代理实验。
 - **自动运行与追溯**：每日增量采集、任务重试、断点恢复、去重、血缘查询及不可变发布。
 - **应用连接**：飞书、Telegram、Discord、Slack 的命令、PDF 导入、图表人工复核和日报；MCP 接口支持外部助手调用。
 
@@ -40,7 +41,8 @@ flowchart LR
     state -.-> release
 ```
 
-每日飞轮生成训练数据文件；模型训练由下游训练程序执行。SFT 可独立运行或作为每日流程的可选阶段，默认关闭。
+每日飞轮生成训练数据文件；目标模型训练由下游训练程序执行。SFT 可独立运行或作为每日流程的可选阶段，默认关闭。
+DoReMi/RegMix 是另外显式启动的小型代理训练实验，用于学习配比，不随每日任务自动运行。
 
 ## 快速开始
 
@@ -94,6 +96,7 @@ python -m workflow.cli list
 | 手工处理财报、了解目录和交付内容 | [财报处理与交付](docs/financial-workflow.md) |
 | 调整清洗规则、切片与 LLM 治理 | [清洗与治理](docs/governance.md) |
 | 从 v7 证据生成文本或多模态 SFT | [文本 SFT](docs/sft.md) · [图表多模态 SFT](docs/sft-vision.md) |
+| 扩展生成方法、调整数据比例或学习配比 | [方法库](docs/training-methods.md) · [数据配比](docs/data-mixtures.md) · [DoReMi / RegMix](docs/mixture-experiments.md) |
 | 从已有 v5/v6 发布包构建语料 | [已有发布包生成预训练语料](docs/pretraining.md) |
 | 部署或连接 OCR 服务 | [PaddleOCR 部署与连接](docs/paddleocr_remote.md) |
 | 查看日志、备份、恢复和排错 | [日志说明](docs/logging.md) · [运维手册](docs/local_operations.md) |
@@ -102,7 +105,8 @@ python -m workflow.cli list
 
 ## 项目状态
 
-每日飞轮已实现，迁移公开仓库前 149 项离线测试通过。应用连接及 SFT 为新增实现，目前完成静态检查，尚未功能测试或实连验收。
+每日飞轮已实现，迁移公开仓库前 149 项离线测试通过。应用连接、SFT 和新增方法/配比为后续实现，目前完成静态检查，尚未功能测试或实连验收。
+DoReMi/RegMix 提供算法适配流程，尚无本项目真实语料训练结果；不宣称复现原论文的规模或性能。
 真实 OCR/模型服务的完整实跑和输出质量仍需在配置后验证；
 定时模板不会自动安装到系统。正式飞轮没有 mock 回退，未确认的来源与质量问题会保留在审核记录中。
 

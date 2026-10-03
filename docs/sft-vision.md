@@ -144,3 +144,7 @@ python -m workflow.flywheel_cli --data-root data trace --sample-id YOUR_SFT_SAMP
 
 代码已加入多模态生成、原图审核、区域记录、便携图片导出、PIL 加载和增强校验。
 尚未运行功能测试、真实模型验收或下游视觉模型训练；不会创建真实数据或调用付费模型来替代这些待办。
+
+## 描述与多轮问答
+
+`config/sft-vision-methods.json` 额外支持 visual_description 和 visual_conversation，见[生成方法](training-methods.md)。多轮图片仅放在首个 user 消息，后续轮次共享该图；原图随包导出。
