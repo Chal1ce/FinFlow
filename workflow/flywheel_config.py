@@ -44,7 +44,9 @@ class ModelRole:
                 int(os.getenv("LLM_MAX_TOKENS", "4096")),
             )
         prefix = (
-            "FIN_DOC_" + role.upper()
+            "FIN_DOC_REFINER"
+            if role == "refine"
+            else "FIN_DOC_" + role.upper()
             if role.startswith("sft_")
             else "FIN_DOC_VISION"
             if role == "vision"
@@ -95,6 +97,9 @@ class FlywheelConfig:
         if set(self.methods) & TRANSFORMS.keys():
             roles.append("synthesize")
         self.roles = {role: ModelRole.load(role) for role in roles}
+        from workflow.refiner_config import refiner_options
+
+        self.refiner = refiner_options(self.path.resolve().parent.parent)
         requested_governance = self.policy.get("governance_backend", "none")
         self.governance_backend = (
             ("openai" if self.roles["govern"].key else "none") if requested_governance == "auto" else requested_governance
@@ -132,6 +137,11 @@ class FlywheelConfig:
                 "ocr_options": self.ocr_options,
             }
         )
+        # Plugin settings have their own identity: toggling them does not rerun OCR/governance.
+        self.refiner_identity = None
+        if self.refiner["enabled"]:
+            self.roles["refine"] = ModelRole.load("refine")
+            self.refiner_identity = digest({"options": self.refiner, "model": self.roles["refine"].identity(), "pipeline": self.version})
 
     def preflight(self) -> dict:
         errors = []
@@ -144,6 +154,8 @@ class FlywheelConfig:
         elif self.backend == "cloud" and not self.runtime.cloud_paddle.token:
             errors.append("PADDLEOCR cloud token is required")
         required = {"review"} | ({"vision"} if "visual" in self.methods else set())
+        if self.refiner["enabled"]:
+            required.add("refine")
         required |= set(self.methods) & {"translate", "rewrite"}
         if set(self.methods) & TRANSFORMS.keys():
             required.add("synthesize")
@@ -212,5 +224,7 @@ class FlywheelConfig:
             "config_version": self.version,
             "data_root": str(self.root),
             "methods": self.methods,
+            "refiner": {k: v for k, v in self.refiner.items() if k != "system_prompt"},
+            "refiner_identity": self.refiner_identity,
             "training_release": self.release_options,
         }

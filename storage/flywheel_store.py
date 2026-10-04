@@ -91,7 +91,7 @@ class FlywheelStore(StateStore):
             )
         return uid
 
-    def claim(self, owner, *, lease_seconds=3600):
+    def claim(self, owner, *, lease_seconds=3600, refiner_identity=None):
         now = time.time()
         self.connection.execute("BEGIN IMMEDIATE")
         try:
@@ -104,8 +104,9 @@ class FlywheelStore(StateStore):
                 "SELECT t.* FROM processing_task t LEFT JOIN processing_task d "
                 "ON d.task_uid=t.dependency_uid WHERE t.status IN ('pending','retry_wait','deferred') "
                 "AND t.available_at<=? AND (t.dependency_uid IS NULL OR d.status='succeeded') "
+                "AND (t.kind<>'refine' OR json_extract(t.payload_json,'$.refiner_identity')=?) "
                 "ORDER BY t.created_at,t.task_uid LIMIT 1",
-                (now,),
+                (now, refiner_identity),
             ).fetchone()
             if row:
                 self.connection.execute(
@@ -155,3 +156,13 @@ class FlywheelStore(StateStore):
 
     def counts(self):
         return {row[0]: row[1] for row in self.connection.execute("SELECT status,count(*) FROM processing_task GROUP BY status")}
+
+    def active_counts(self, refiner_identity):
+        return {
+            row[0]: row[1]
+            for row in self.connection.execute(
+                "SELECT status,count(*) FROM processing_task WHERE kind<>'refine' "
+                "OR json_extract(payload_json,'$.refiner_identity')=? GROUP BY status",
+                (refiner_identity,),
+            )
+        }

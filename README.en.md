@@ -48,6 +48,9 @@ SFT runs independently or as an optional daily stage, disabled by default.
 
 Optional [daily training publication](docs/en/training-publication.md) connects snapshots, near deduplication, mixtures, verification and version publication through one `.env`. SQLite tracks recovery and lineage; failures retain the previous `latest`. Daily reports are available as JSON/Markdown.
 
+
+Optional [small-model refiner](docs/en/text-refiner.md): disabled by default, with audit/apply modes, a separate rewrite switch and a configurable model. Adds reviewed CPT candidates while preserving source evidence, operation lineage and reports.
+
 ## Quick start
 
 Python 3.10+ is required. The daily flywheel currently runs on macOS/Linux:

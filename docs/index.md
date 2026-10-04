@@ -56,6 +56,9 @@ permalink: /
 - [命令与参数参考](cli-reference.md)：独立入口的详细参数。
 - [环境模板](https://github.com/Chal1ce/FinFlow/blob/main/.env.example) · [来源配置](https://github.com/Chal1ce/FinFlow/blob/main/config/collection.json) · [飞轮配方](https://github.com/Chal1ce/FinFlow/blob/main/config/flywheel.json)。
 
+
+- [可选小模型精炼插件](text-refiner.md)：开关、模型选择、操作协议、审核与恢复。
+
 ### 处理与数据格式
 
 - [财报处理与交付](financial-workflow.md)：传统流水线、运行目录、财报元数据和发布内容。

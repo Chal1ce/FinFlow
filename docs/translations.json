@@ -16,7 +16,7 @@
     "coverage": "full"
   },
   "data-flywheel": {
-    "source_sha256": "1bea2a120c7daa6a66dc0feea4197a90f7c2fd252a39aec057e355eb3264b3f3",
+    "source_sha256": "912cd25fa03719907bc83a898d66f8ebe6acb6367d1fa9835799ec31c16ba28e",
     "coverage": "summary"
   },
   "data-mixtures": {
@@ -36,7 +36,7 @@
     "coverage": "full"
   },
   "index": {
-    "source_sha256": "1a21647d649ed9364584582df3fa8937fc648cad37fa1e88aa52a97f4f38a4c9",
+    "source_sha256": "cfae592ae9a9130b519bfe921bab944541da5309ff773776950f5478f4e3dfba",
     "coverage": "summary"
   },
   "mixture-experiments": {
@@ -81,6 +81,10 @@
   },
   "training-publication": {
     "source_sha256": "9499c1d971ce683eae42929fb8dafde77034d4020e5f7019422bf341bccca39f",
+    "coverage": "full"
+  },
+  "text-refiner": {
+    "source_sha256": "00b84344dfe8958256fbb381d1e589a7eb72c92223d3dc8163f27caf3077f1bb",
     "coverage": "full"
   }
 }
