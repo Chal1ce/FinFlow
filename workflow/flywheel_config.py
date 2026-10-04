@@ -9,9 +9,11 @@ import math
 from urllib.parse import urlsplit
 from dataclasses import dataclass
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from config import load_config
 from training.cpt_methods import TRANSFORMS
+from workflow.training_release_config import env_bool, overlay, release_options
 
 
 def digest(value: object) -> str:
@@ -72,7 +74,10 @@ class FlywheelConfig:
     def __init__(self, path: Path | str, *, data_root: Path | None = None):
         self.runtime = load_config()  # existing dotenv parser; never source .env as shell code
         self.path = Path(path)
-        self.policy = json.loads(self.path.read_text(encoding="utf-8"))
+        self.policy = overlay(json.loads(self.path.read_text(encoding="utf-8")), "FIN_DOC_FLYWHEEL_POLICY")
+        self.release_options = release_options()
+        self.report_timezone = os.getenv("FIN_DOC_REPORT_TIMEZONE", "Asia/Shanghai")
+        ZoneInfo(self.report_timezone)
         self.root = (data_root or self.runtime.paths.data_root).resolve()
         self.collection = Path(self.policy.get("collection_config", "config/collection.json"))
         if not self.collection.is_absolute():
@@ -103,10 +108,10 @@ class FlywheelConfig:
         sft = self.policy.get("sft", {})
         if not isinstance(sft, dict) or type(sft.get("enabled", False)) is not bool:
             raise ValueError("sft must be an object with boolean enabled")
-        if sft.get("enabled"):
+        if env_bool("FIN_DOC_SFT_ENABLED", sft.get("enabled", False)):
             from training.sft_config import SFTConfig
 
-            sft_path = Path(sft.get("config", "config/sft.json"))
+            sft_path = Path(os.getenv("FIN_DOC_SFT_CONFIG", sft.get("config", "config/sft.json")))
             if not sft_path.is_absolute():
                 sft_path = self.path.resolve().parent.parent / sft_path
             self.sft = SFTConfig(sft_path)
@@ -207,4 +212,5 @@ class FlywheelConfig:
             "config_version": self.version,
             "data_root": str(self.root),
             "methods": self.methods,
+            "training_release": self.release_options,
         }

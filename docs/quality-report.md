@@ -56,3 +56,5 @@ python -m training.quality_report \
 未产生数据包时记为 `not_available`；报告失败会使运行标为 `partial` 并记录错误类型，已发布数据保留。
 每日 CPT 通常是增量，SFT 是当前选定证据/配方的快照，两者不能直接累加成“今日新增样本”。
 报告本身成功并不代表样本通过事实验收；请同时检查 `warnings`。
+
+最终配比包也支持质量报告。启用[每日训练版本发布](training-publication.md)后，版本中自带覆盖目标、上一版对比和配比缺口；按日 JSON/Markdown 另保存在 `reports/daily/`。

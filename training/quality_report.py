@@ -25,7 +25,17 @@ def inspect_package(path):
     path = Path(path).resolve()
     manifest = verify(path)
     schema = manifest.get("schema_version")
-    if schema == "financial-sft-dataset-v2":
+    mixed = schema == "finflow-mixture-dataset-v1"
+    if mixed:
+        from training.mixture import verify_mixture
+
+        verify_mixture(path)
+        kind = manifest["kind"]
+        selected = read_jsonl(path / "records.jsonl")
+        mixed_rows = {r["id"]: r for r in selected}
+        rows = [r["payload"] for r in selected]
+        audit = []
+    elif schema == "financial-sft-dataset-v2":
         verify_dataset(path)
         kind = "sft"
         rows = read_jsonl(path / "samples.jsonl")
@@ -51,7 +61,14 @@ def inspect_package(path):
         if uid in ids or split not in {"train", "validation"}:
             raise ValueError("duplicate sample ID or unsupported split")
         ids.add(uid)
-        if kind == "sft":
+        if mixed:
+            selected = mixed_rows[uid]
+            content, metadata = selected["content_hash"], selected["metadata"]
+            works = set(selected["works"])
+            count = selected["token_count"]
+            if count is not None:
+                tokens += count
+        elif kind == "sft":
             if row.get("decision", {}).get("status") != "accepted":
                 raise ValueError("unaccepted SFT sample")
             content = sample_hash(row)
@@ -95,12 +112,15 @@ def inspect_package(path):
                 distributions[field][label] += 1
                 if count is not None:
                     token_distributions[field][label] += count
-    if manifest.get("samples") != len(rows):
+    expected_samples = manifest["train_samples"] + manifest["validation_samples"] if mixed else manifest.get("samples")
+    if expected_samples != len(rows):
         raise ValueError("manifest sample count mismatch")
     audit_statuses = Counter(str(a.get("status") or "excluded") for a in audit)
     # Machine reason codes only: free-form judge explanations may contain source text.
     reasons = Counter(str(a.get("reason") or "unspecified") for a in audit)
-    scope = "snapshot" if "snapshot" in schema or kind == "sft" else "lineage_only" if "lineage" in schema else "delta"
+    scope = (
+        "mixture" if mixed else "snapshot" if "snapshot" in schema or kind == "sft" else "lineage_only" if "lineage" in schema else "delta"
+    )
     warnings = []
     conflicts = {
         "content": sum(len(v["splits"]) > 1 for v in inventory.values()),
@@ -114,17 +134,19 @@ def inspect_package(path):
     if rows and not distributions["split"]["validation"]:
         warnings.append("no_validation_samples_in_package")
     if manifest.get("status") == "partial":
-        warnings.append("partial_generation")
+        warnings.append("mixture_shortfall" if mixed else "partial_generation")
     return {
         "schema_version": SCHEMA,
         "package": {
-            "dataset_id": manifest["dataset_id"],
+            "dataset_id": manifest.get("dataset_id", path.name),
             "kind": kind,
             "scope": scope,
             "schema_version": schema,
             "manifest_sha256": sha256(path / "manifest.json"),
             "inventory_sha256": sha256(path / "checksums.sha256"),
-            "recipe_uid": manifest.get("recipe_uid"),
+            "recipe_uid": hashlib.sha256(json.dumps(manifest["recipe"], sort_keys=True).encode()).hexdigest()
+            if mixed
+            else manifest.get("recipe_uid"),
             "tokenizer": manifest.get("tokenizer"),
             "status": manifest.get("status", "unspecified"),
         },

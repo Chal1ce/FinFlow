@@ -61,7 +61,7 @@ The output carries the frozen `near-dedup/` report, so verification does not req
 Shortfalls use existing `allow_shortfall` and `redistribute` settings. Representatives enter the candidate pool but remain subject to later quota/quality selection.
 
 Fixed and temperature mixtures are supported. DoReMi/RegMix weights refer to their original experimental pool;
-combining them with this filter is currently rejected. Daily runs do not automatically update the index: invoke commands after publishing versions.
+combining them with this filter is currently rejected. Enable [daily training publication](training-publication.md) in `.env` to maintain dedicated indexes and apply frozen decisions automatically. The standalone commands remain available.
 Without `near_dedup_report`, mixture behavior is unchanged.
 
 ## Conservative rules and limits

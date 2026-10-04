@@ -74,16 +74,9 @@ class FinFlowService:
                     if stamp.astimezone(self.config.timezone).date() == wanted:
                         runs.append(report)
         # Counts of candidates/queue are cumulative snapshots, not daily additions.
-        return {
-            "date": wanted.isoformat(),
-            "timezone": str(self.config.timezone),
-            "run_count": len(runs),
-            "completed_tasks": sum(r.get("completed_tasks", 0) for r in runs),
-            "model_requests": sum(r.get("model_requests") or 0 for r in runs),
-            "usage_missing": any(r.get("model_usage") is None for r in runs),
-            "latest": runs[-1] if runs else None,
-            "runs": [{k: r.get(k) for k in ("run_id", "status", "created_at", "dataset", "errors")} for r in runs],
-        }
+        from workflow.daily_report import aggregate
+
+        return aggregate(runs, wanted.isoformat(), str(self.config.timezone))
 
     def lineage(self, actor: Actor, kind: str, identity: str) -> dict:
         actor.require("viewer")

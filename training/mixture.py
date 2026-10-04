@@ -177,9 +177,9 @@ def plan(config):
     return selected + [r for r in records if r["split"] == "validation"], manifest
 
 
-def build(config, output):
+def build(config, output, *, allow_partial_artifact=False):
     rows, manifest = plan(config)
-    if manifest["shortfall"] and not config.get("allow_shortfall", False):
+    if manifest["shortfall"] and not config.get("allow_shortfall", False) and not allow_partial_artifact:
         raise ValueError("requested budget cannot be filled; inspect plan or explicitly set allow_shortfall")
     destination = Path(output).resolve()
     if destination.exists():

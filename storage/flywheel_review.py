@@ -60,6 +60,10 @@ def human_review(config, store, candidate_uid, status, *, reason, reviewer):
 
 
 def trace(store, *, sample_uid=None, artifact_uid=None, candidate_uid=None):
+    def record(kind, uid):
+        row = store.connection.execute("SELECT data_json FROM flywheel_record WHERE kind=? AND uid=?", (kind, uid)).fetchone()
+        return json.loads(row[0]) if row else None
+
     roots, origins = set(), []
     if sample_uid:
         origins = [
@@ -71,10 +75,17 @@ def trace(store, *, sample_uid=None, artifact_uid=None, candidate_uid=None):
         for origin in origins:
             roots.add(origin["artifact_uid"])
             roots.add(origin["decision"]["artifact_uid"])
-        sft_sample = store.get("sft-sample", sample_uid)
+        sft_sample = record("sft-sample", sample_uid)
         if sft_sample:
             origins.append(sft_sample)
             roots.add(sft_sample["artifact_uid"])
+        exported = record("training-export-sample", sample_uid)
+        if exported:
+            origins.extend(exported["origins"])
+            for origin in exported["origins"]:
+                roots.add(origin["artifact_uid"])
+                if origin.get("decision", {}).get("artifact_uid"):
+                    roots.add(origin["decision"]["artifact_uid"])
     elif candidate_uid:
         row = store.connection.execute(
             "SELECT artifact_uid,decision_json FROM training_candidate WHERE candidate_uid=?", (candidate_uid,)

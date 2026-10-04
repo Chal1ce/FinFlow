@@ -44,19 +44,19 @@
     "coverage": "full"
   },
   "near-dedup": {
-    "source_sha256": "f3d557ac883c66d286125881e1e15fff2e42b315bfc490b18a9a0f22cabf9c41",
+    "source_sha256": "3ecd6c8e9cedb6bb74d68d6d50a0218eea871c0035a83ceaf807a14481983ba8",
     "coverage": "full"
   },
   "pretraining": {
     "source_sha256": "94bdbe1a7e3313b19c0f1de159caa98ca1b1630c6987265f0ed95651609cad80",
     "coverage": "full"
   },
-  "quick-start": {
-    "source_sha256": "ba5a6a66c9058f661aa16b804726939ae741d1ba78069c77a98e0369702cb2a0",
+  "quality-report": {
+    "source_sha256": "c27385c67b04446071b227cbede69a1e30bb0d2afc7b6653657427f33214e0ef",
     "coverage": "full"
   },
-  "quality-report": {
-    "source_sha256": "0ae2eb973286e84696bc8bc326903b72b8ef1649eda5e3b49249816f0e10b67c",
+  "quick-start": {
+    "source_sha256": "ba5a6a66c9058f661aa16b804726939ae741d1ba78069c77a98e0369702cb2a0",
     "coverage": "full"
   },
   "reference": {
@@ -77,6 +77,10 @@
   },
   "training-methods": {
     "source_sha256": "4f73182888d8db84d2afe22c42da1fce87850e484cd5e5831483048660dc60c4",
+    "coverage": "full"
+  },
+  "training-publication": {
+    "source_sha256": "9499c1d971ce683eae42929fb8dafde77034d4020e5f7019422bf341bccca39f",
     "coverage": "full"
   }
 }

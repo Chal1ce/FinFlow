@@ -13,7 +13,7 @@ from pathlib import Path
 from core.context import PipelineContext
 from core.flywheel_files import register_file, safe_path, sha256, write_json
 from core.ids import stable_uid
-from delivery.flywheel_release import publish_evidence
+from delivery.flywheel_release import evidence_identity, publish_evidence
 from processing.governance_runner import GovernanceRunner, discover_documents
 from processing.llm_governance import NoneGovernanceModel
 from processing.visual_assets import VisualAssetExtractor, ocr_pages
@@ -27,6 +27,7 @@ from storage.flywheel_store import FlywheelStore
 from storage.state_store import utc_now
 from training.flywheel_corpus import FlywheelCorpusBuilder, TokenSplitter
 from workflow.flywheel_config import digest
+from workflow.daily_report import inventory, persist_daily, processing_stages, recover_interrupted
 
 
 class PipelineBusyError(RuntimeError):
@@ -76,7 +77,12 @@ class DailyFlywheel:
         with DailyLock(self.root), FlywheelStore(self.root / "state" / "pipeline.db") as store:
             self.store, self.context = store, context
             self.splitter = TokenSplitter(self.config.tokenizer, self.config.max_tokens)
+            recover_interrupted(self.root, store, self.config.report_timezone)
             store.start_run(context, dry_run=False)
+            initial_inventory = inventory(store)
+            store.put("daily-start", context.run_id, {**context.as_mapping(), "inventory": initial_inventory})
+            initial_requests = getattr(self.client, "requests", 0) or 0
+            initial_usage = {role: dict(values) for role, values in (getattr(self.client, "usage", {}) or {}).items()}
             # The kernel lock proves no earlier daily worker is still alive.
             with store.connection:
                 store.connection.execute(
@@ -136,12 +142,12 @@ class DailyFlywheel:
                         errors.append(error)
                 dataset = {"status": "no_change"}
                 release = None
+                builder = FlywheelCorpusBuilder(
+                    self.root, store, self.splitter, validation_fraction=float(self.config.policy.get("validation_fraction", 0.05))
+                )
                 accepted = store.connection.execute("SELECT count(*) FROM training_candidate WHERE status='accepted'").fetchone()[0]
                 if accepted or store.records("governed"):
                     # Recover any publication interrupted after the atomic rename.
-                    builder = FlywheelCorpusBuilder(
-                        self.root, store, self.splitter, validation_fraction=float(self.config.policy.get("validation_fraction", 0.05))
-                    )
                     directories = sorted((self.root / "training" / "pretrain").glob("*"))
                     directories += sorted((self.root / "training" / "origin_deltas").glob("*"))
                     for directory in directories:
@@ -149,17 +155,7 @@ class DailyFlywheel:
                             manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
                             if manifest.get("schema_version") in {"continued-pretraining-delta-v2", "training-lineage-delta-v1"}:
                                 builder._index(directory)
-                    release_id = stable_uid(
-                        "release-v7",
-                        self.config.version,
-                        [
-                            (r[0], r[1], r[2])
-                            for r in store.connection.execute(
-                                "SELECT candidate_uid,status,decision_json FROM training_candidate ORDER BY candidate_uid"
-                            )
-                        ],
-                        [r[0] for r in store.connection.execute("SELECT artifact_uid FROM artifact ORDER BY artifact_uid")],
-                    )
+                    release_id = evidence_identity(store, self.config.version)
                     release = publish_evidence(self.root, store, release_id)
                     if accepted:
                         dataset = builder.build("delta-" + context.run_id, release=release)
@@ -171,7 +167,7 @@ class DailyFlywheel:
 
                         sft_builder = SFTBuilder(self.root, store, context, self.config.sft, self.config.policy.get("source_policy", {}))
                         try:
-                            sft_dataset = sft_builder.build(
+                            sft_dataset = sft_builder.reusable_snapshot(release["release_id"]) or sft_builder.build(
                                 "sft-" + context.run_id,
                                 release["release_id"],
                                 max_seconds=max(0, self.config.deadline_seconds - (time.monotonic() - started)),
@@ -184,6 +180,18 @@ class DailyFlywheel:
                                 "model_usage": sft_builder.client.usage,
                             }
                             errors.append({"stage": "sft", "error_type": type(exc).__name__})
+                from training.daily_release import DailyTrainingRelease
+
+                training_release = DailyTrainingRelease(self.config, store, context, deadline=started + self.config.deadline_seconds).run(
+                    cpt_recipe=builder.recipe_uid, sft_dataset=sft_dataset
+                )
+                if training_release["status"] in {"failed", "deferred"}:
+                    errors.append(
+                        {
+                            "stage": "training_release_" + training_release.get("stage", "unknown"),
+                            "error_type": training_release["error_type"],
+                        }
+                    )
                 counts = store.counts()
                 visual_counts = {r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM visual_asset GROUP BY status")}
                 decision_counts = {
@@ -194,7 +202,8 @@ class DailyFlywheel:
                 reports = daily_reports(self.root, context.run_id, {"cpt": dataset, "sft": sft_dataset})
                 errors.extend(
                     {"stage": "quality_report_" + name, "error_type": result["error_type"]}
-                    for name, result in reports.items() if result["status"] == "failed"
+                    for name, result in reports.items()
+                    if result["status"] == "failed"
                 )
                 pending = sum(counts.get(s, 0) for s in ("pending", "running", "retry_wait", "deferred"))
                 status = (
@@ -205,7 +214,14 @@ class DailyFlywheel:
                     or dataset.get("split_conflicts")
                     or sft_dataset["status"] in {"partial", "failed"}
                     or (completed and (counts.get("needs_review", 0) or visual_counts.get("needs_review", 0)))
-                    else ("success" if completed or dataset["status"] != "no_change" or sft_dataset.get("samples") else "no_change")
+                    else (
+                        "success"
+                        if completed
+                        or dataset["status"] != "no_change"
+                        or sft_dataset.get("status") == "success"
+                        or training_release["status"] == "success"
+                        else "no_change"
+                    )
                 )
                 summary = {
                     "status": status,
@@ -219,19 +235,50 @@ class DailyFlywheel:
                     "dataset": dataset,
                     "sft_dataset": sft_dataset,
                     "quality_reports": reports,
+                    "training_release": training_release,
+                    "processing_stages": processing_stages(store, context.run_id),
+                    "additions": {k: v - initial_inventory[k] for k, v in inventory(store).items()},
                     "release": release,
                     "errors": errors,
-                    "model_requests": (getattr(self.client, "requests", 0) or 0) + sft_dataset.get("model_requests", 0),
-                    "model_usage": getattr(self.client, "usage", None),
+                    "model_requests": (getattr(self.client, "requests", 0) or 0) - initial_requests + sft_dataset.get("model_requests", 0),
+                    "model_usage": {
+                        role: {key: value - initial_usage.get(role, {}).get(key, 0) for key, value in values.items()}
+                        for role, values in (getattr(self.client, "usage", {}) or {}).items()
+                    }
+                    if hasattr(self.client, "usage")
+                    else None,
+                    "sft_model_usage": sft_dataset.get("model_usage"),
                     "elapsed_seconds": round(time.monotonic() - started, 3),
                     "created_at": utc_now(),
                 }
-                write_json(self.root / "manifests" / "daily" / f"{context.run_id}.json", summary)
-                store.put("daily", context.run_id, summary)
+                persist_daily(self.root, store, summary, timezone=self.config.report_timezone)
                 store.finish_run(context.run_id, status)
                 return summary
             except BaseException as exc:
                 store.finish_run(context.run_id, "failed", type(exc).__name__)
+                failure = {
+                    **locals().get("summary", {}),
+                    "status": "failed",
+                    "run_id": context.run_id,
+                    "batch_id": context.batch_id,
+                    "created_at": utc_now(),
+                    "config_version": self.config.version,
+                    "completed_tasks": completed,
+                    "queue": store.counts(),
+                    "additions": {k: v - initial_inventory[k] for k, v in inventory(store).items()},
+                    "model_requests": (getattr(self.client, "requests", 0) or 0)
+                    - initial_requests
+                    + locals().get("sft_dataset", {}).get("model_requests", 0),
+                    "dataset": locals().get("dataset", {}),
+                    "sft_dataset": locals().get("sft_dataset", {}),
+                    "training_release": locals().get("training_release", {"status": "not_started"}),
+                    "errors": [*errors, {"stage": "daily", "error_type": type(exc).__name__}],
+                    "elapsed_seconds": round(time.monotonic() - started, 3),
+                }
+                try:
+                    persist_daily(self.root, store, failure, timezone=self.config.report_timezone)
+                except Exception:
+                    pass  # Preserve the original failure if the report destination is unavailable.
                 raise
 
     def _runners(self):
