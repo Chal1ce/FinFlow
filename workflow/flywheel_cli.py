@@ -32,6 +32,8 @@ def main(argv=None):
     run.add_argument("--batch-id", default=os.getenv("FIN_DOC_BATCH_ID"))
     run.add_argument("--no-discover", action="store_true", help="drain local queue and backfill existing OCR")
     commands.add_parser("status")
+    refinements = commands.add_parser("refiner-status", help="inspect local plugin tasks without calling models")
+    refinements.add_argument("--limit", type=int, default=20)
     report = commands.add_parser("report", help="read a calendar-day report without calling providers")
     report.add_argument("--date", help="YYYY-MM-DD in FIN_DOC_REPORT_TIMEZONE")
     publish = commands.add_parser("publish-training", help="resume training publication only; no discovery, OCR or models")
@@ -40,7 +42,9 @@ def main(argv=None):
     release_check.add_argument("path", type=Path)
     audit = commands.add_parser("audit", help="list candidates for human sampling/review")
     audit.add_argument("--status", choices=["pending", "accepted", "rejected", "needs_review"])
-    audit.add_argument("--method", choices=["original", "visual", "translate", "rewrite"])
+    audit.add_argument(
+        "--method", choices=["original", "visual", "translate", "rewrite", "refined", "distill", "textbook", "knowledge_list", "diverse_qa"]
+    )
     audit.add_argument("--limit", type=int, default=20)
     review = commands.add_parser("review-candidate", help="record an explicit human decision")
     review.add_argument("--candidate-id", required=True)
@@ -146,6 +150,23 @@ def main(argv=None):
                         (args.status, args.status, args.method, args.method, args.limit),
                     )
                     print(json.dumps({"status": "success", "candidates": [dict(row) for row in rows]}, ensure_ascii=False, indent=2))
+                    return 0
+                if args.command == "refiner-status":
+                    if not 1 <= args.limit <= 1000:
+                        raise ValueError("refiner limit must be between 1 and 1000")
+                    rows = store.connection.execute(
+                        "SELECT task_uid,status,attempts,error_type,result_json,"
+                        "json_extract(payload_json,'$.refiner_identity') AS refiner_identity "
+                        "FROM processing_task WHERE kind='refine' ORDER BY created_at DESC,task_uid LIMIT ?",
+                        (args.limit,),
+                    )
+                    tasks = []
+                    for row in rows:
+                        item = dict(row)
+                        item["result"] = json.loads(item.pop("result_json") or "{}")
+                        item["active_recipe"] = item["refiner_identity"] == config.refiner_identity
+                        tasks.append(item)
+                    print(json.dumps({"enabled": config.refiner["enabled"], "tasks": tasks}, ensure_ascii=False, indent=2))
                     return 0
                 if args.command == "review-candidate":
                     result = human_review(config, store, args.candidate_id, args.decision, reason=args.reason, reviewer=args.reviewer)

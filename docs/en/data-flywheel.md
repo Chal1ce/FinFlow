@@ -6,6 +6,9 @@ nav_order: 3
 # Daily data flywheel
 {: .no_toc }
 
+
+Optional extension: the [small-model refiner](text-refiner.md) adds a disabled-by-default CPT branch with `.env` configuration, audit/apply modes and a separate rewrite switch.
+
 ## On this page
 {: .no_toc }
 

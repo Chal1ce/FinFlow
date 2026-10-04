@@ -27,7 +27,7 @@ from storage.flywheel_store import FlywheelStore
 from storage.state_store import utc_now
 from training.flywheel_corpus import FlywheelCorpusBuilder, TokenSplitter
 from workflow.flywheel_config import digest
-from workflow.daily_report import inventory, persist_daily, processing_stages, recover_interrupted
+from workflow.daily_report import inventory, persist_daily, processing_stages, recover_interrupted, refiner_summary
 
 
 class PipelineBusyError(RuntimeError):
@@ -95,6 +95,12 @@ class DailyFlywheel:
                 if discover:
                     errors.extend(self._discover())
                 self._backfill()
+                if self.config.refiner["enabled"]:
+                    from processing.text_refiner import TextRefiner
+
+                    plugin = TextRefiner(self)
+                    for governed in store.records("governed"):
+                        plugin.enqueue(governed)
                 lease = (
                     max(
                         self.config.deadline_seconds,
@@ -107,7 +113,7 @@ class DailyFlywheel:
                 for _ in range(self.config.task_limit):
                     if time.monotonic() - started >= self.config.deadline_seconds:
                         break
-                    task = store.claim(context.run_id, lease_seconds=lease)
+                    task = store.claim(context.run_id, lease_seconds=lease, refiner_identity=self.config.refiner_identity)
                     if not task:
                         break
                     step = store.start_step(
@@ -193,6 +199,7 @@ class DailyFlywheel:
                         }
                     )
                 counts = store.counts()
+                active_counts = store.active_counts(self.config.refiner_identity)
                 visual_counts = {r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM visual_asset GROUP BY status")}
                 decision_counts = {
                     r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM training_candidate GROUP BY status")
@@ -205,15 +212,15 @@ class DailyFlywheel:
                     for name, result in reports.items()
                     if result["status"] == "failed"
                 )
-                pending = sum(counts.get(s, 0) for s in ("pending", "running", "retry_wait", "deferred"))
+                pending = sum(active_counts.get(s, 0) for s in ("pending", "running", "retry_wait", "deferred"))
                 status = (
                     "partial"
                     if errors
                     or pending
-                    or counts.get("failed", 0)
+                    or active_counts.get("failed", 0)
                     or dataset.get("split_conflicts")
                     or sft_dataset["status"] in {"partial", "failed"}
-                    or (completed and (counts.get("needs_review", 0) or visual_counts.get("needs_review", 0)))
+                    or (completed and (active_counts.get("needs_review", 0) or visual_counts.get("needs_review", 0)))
                     else (
                         "success"
                         if completed
@@ -230,6 +237,8 @@ class DailyFlywheel:
                     "config_version": self.config.version,
                     "completed_tasks": completed,
                     "queue": counts,
+                    "active_queue": active_counts,
+                    "refiner": refiner_summary(store, context.run_id),
                     "visuals": visual_counts,
                     "candidates": decision_counts,
                     "dataset": dataset,
@@ -265,6 +274,7 @@ class DailyFlywheel:
                     "config_version": self.config.version,
                     "completed_tasks": completed,
                     "queue": store.counts(),
+                    "refiner": refiner_summary(store, context.run_id),
                     "additions": {k: v - initial_inventory[k] for k, v in inventory(store).items()},
                     "model_requests": (getattr(self.client, "requests", 0) or 0)
                     - initial_requests
@@ -677,7 +687,16 @@ class DailyFlywheel:
                         version=self.config.version,
                         dependency=task["task_uid"],
                     )
+        if self.config.refiner["enabled"]:
+            from processing.text_refiner import TextRefiner
+
+            TextRefiner(self).enqueue(self.store.get("governed", artifact))
         return {"governed_artifact_uid": artifact, "visuals": len(assets)}
+
+    def _refine(self, payload, task):
+        from processing.text_refiner import TextRefiner
+
+        return TextRefiner(self).run(payload, task)
 
     def _describe(self, payload, task):
         asset = payload["asset"]
@@ -767,7 +786,7 @@ class DailyFlywheel:
         self.store.enqueue("review", uid, record, version=self.config.version, dependency=dependency)
         return uid
 
-    def _model_result(self, role, prompt, path, *, image_path=None, image_hash=None):
+    def _model_result(self, role, prompt, path, *, image_path=None, image_hash=None, messages=None):
         identity = digest({"role": self.config.roles[role].identity(), "prompt": prompt, "image_sha256": image_hash})
         cached = self.store.get("model-result", self.context.relative_path(path))
         if path.exists():
@@ -775,7 +794,10 @@ class DailyFlywheel:
             if value.get("input_identity") != identity or (cached and sha256(path) != cached["sha256"]):
                 raise ValueError("model checkpoint identity/checksum mismatch")
             return value["response"]
-        response = self.client.generate(role, prompt, image=safe_path(self.root, image_path) if image_path else None, image_hash=image_hash)
+        kwargs = {"messages": messages} if messages is not None else {}
+        response = self.client.generate(
+            role, prompt, image=safe_path(self.root, image_path) if image_path else None, image_hash=image_hash, **kwargs
+        )
         write_json(path, {"input_identity": identity, "response": response, "prompt": prompt})
         self.store.put("model-result", self.context.relative_path(path), {"identity": identity, "sha256": sha256(path)})
         return response

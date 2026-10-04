@@ -48,6 +48,9 @@ DoReMi/RegMix 是另外显式启动的小型代理训练实验，用于学习配
 
 可选启用[每日训练版本发布](docs/training-publication.md)：统一 `.env` 配置，自动汇总、近似去重、配比、版本校验及发布；SQLite 记录阶段恢复和血缘，失败保留上一版 `latest`，生成按日 JSON/Markdown 报告。
 
+
+可选[小模型精炼插件](docs/text-refiner.md)：默认关闭，支持仅记录/实际应用、独立重写开关和自选模型；作为附加 CPT 分支保留原始证据、操作血缘与日报。
+
 ## 快速开始
 
 需要 Python 3.10 或以上。macOS / Linux 在项目根目录执行：

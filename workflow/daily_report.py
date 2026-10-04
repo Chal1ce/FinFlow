@@ -41,11 +41,43 @@ def processing_stages(store, run_id):
     ]
 
 
+def refiner_summary(store, run_id):
+    """Summarize the latest outcome of each plugin task attempted in this run."""
+    records = [
+        json.loads(row[0])
+        for row in store.connection.execute(
+            "SELECT t.result_json FROM processing_task t WHERE t.kind='refine' AND t.result_json IS NOT NULL "
+            "AND EXISTS (SELECT 1 FROM pipeline_step p WHERE p.run_id=? AND p.step_name='flywheel-refine' "
+            "AND json_extract(p.metadata_json,'$.task_uid')=t.task_uid)",
+            (run_id,),
+        )
+    ]
+    return {
+        "attempted_tasks": len(records),
+        "completed": sum("refiner_status" in r for r in records),
+        "actions": dict(Counter(r.get("action", "none") for r in records)),
+        "statuses": dict(Counter(r.get("refiner_status", r.get("error_type", "deferred")) for r in records)),
+        "response_cache_hits": sum(bool(r.get("response_cache_hit")) for r in records),
+        "candidates": sum(bool(r.get("candidate_uid")) for r in records),
+        "input_chars": sum(r.get("input_chars", 0) for r in records),
+        "output_chars": sum(r.get("output_chars", 0) for r in records),
+    }
+
+
 def aggregate(runs, date, timezone):
     runs = sorted(runs, key=lambda r: (r["created_at"], r["run_id"]))
     additions = Counter()
     for run in runs:
         additions.update(run.get("additions", {}))
+    refiner = {
+        key: sum(run.get("refiner", {}).get(key, 0) for run in runs)
+        for key in ("attempted_tasks", "completed", "response_cache_hits", "candidates", "input_chars", "output_chars")
+    }
+    for key in ("actions", "statuses"):
+        counts = Counter()
+        for run in runs:
+            counts.update(run.get("refiner", {}).get(key, {}))
+        refiner[key] = dict(counts)
     return {
         "schema_version": "finflow-daily-report-v1",
         "date": date,
@@ -56,6 +88,7 @@ def aggregate(runs, date, timezone):
         "model_requests": sum(r.get("model_requests") or 0 for r in runs),
         "usage_missing": any(r.get("model_usage") is None for r in runs),
         "additions": dict(additions),
+        "refiner": refiner,
         "published_versions": sorted(
             {r["training_release"]["release_id"] for r in runs if r.get("training_release", {}).get("status") == "success"}
         ),
@@ -76,6 +109,7 @@ def aggregate(runs, date, timezone):
                     "model_usage",
                     "sft_model_usage",
                     "quality_reports",
+                    "refiner",
                     "elapsed_seconds",
                 )
             }
@@ -113,6 +147,8 @@ def markdown(report):
         f"候选审核累计：`{json.dumps(latest.get('candidates', {}), ensure_ascii=False)}`",
         "",
         f"图表累计：`{json.dumps(latest.get('visuals', {}), ensure_ascii=False)}`",
+        "",
+        f"本日精炼插件（各轮处理合计）：`{json.dumps(report.get('refiner', {}), ensure_ascii=False)}`",
         "",
     ]
     release = latest.get("training_release", {})
@@ -188,6 +224,7 @@ def recover_interrupted(root, store, timezone):
             "created_at": start["started_at"],
             "status": "interrupted",
             "completed_tasks": 0,
+            "refiner": refiner_summary(store, start["run_id"]),
             "model_requests": None,
             "model_usage": None,
             "queue": store.counts(),

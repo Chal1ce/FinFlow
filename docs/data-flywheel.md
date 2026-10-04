@@ -6,6 +6,9 @@ nav_order: 3
 # 每日数据飞轮运行说明
 {: .no_toc }
 
+
+可选扩展：[小模型精炼插件](text-refiner.md)提供默认关闭的附加 CPT 分支，统一 `.env` 配置，支持 audit/apply 和独立重写开关。
+
 ## 本页目录
 {: .no_toc }
 
