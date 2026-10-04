@@ -1,0 +1,9 @@
+{
+  "ngram": 5,
+  "num_perm": 64,
+  "bands": 16,
+  "min_chars": 80,
+  "threshold": 0.9,
+  "max_candidates": 10000,
+  "max_chars": 200000
+}

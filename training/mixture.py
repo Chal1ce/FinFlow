@@ -33,6 +33,19 @@ def plan(config):
     if config.get("schema_version") != "finflow-mixture-v1":
         raise ValueError("expected finflow-mixture-v1")
     records, manifest = load_pool(config["inputs"], config.get("group_fields", ["method"]))
+    dedup_decisions = None
+    if config.get("near_dedup_report"):
+        from training.near_dedup import apply_report
+
+        if config.get("method") in {"doremi", "regmix"}:
+            raise ValueError("learned weights describe the original pool; near-dedup requires a new experiment integration")
+        report_path = Path(config["near_dedup_report"])
+        dedup_decisions, dedup_manifest = apply_report(records, manifest, report_path)
+        manifest["near_dedup"] = {
+            "inventory_sha256": sha256(report_path / "checksums.sha256"),
+            "counts": dedup_manifest["counts"],
+            "policy": dedup_manifest["policy"],
+        }
     unit = config.get("unit", "tokens" if manifest["kind"] == "cpt" else "samples")
     if unit not in {"samples", "tokens"} or (manifest["kind"] == "sft" and unit != "samples"):
         raise ValueError("SFT mixtures use samples; CPT mixtures support samples or tokens")
@@ -48,7 +61,9 @@ def plan(config):
     buckets = defaultdict(list)
     for row in records:
         if row["split"] == "train":
-            buckets[row["group"]].append(row)
+            bucket = buckets[row["group"]]
+            if dedup_decisions is None or dedup_decisions[row["id"]]["action"] == "keep":
+                bucket.append(row)
     if not buckets:
         raise ValueError("no training records")
     if unit == "tokens" and len({digest(r["tokenizer"]) for r in records}) != 1:
@@ -58,6 +73,8 @@ def plan(config):
         return r["token_count"] if unit == "tokens" else 1
 
     available = {k: sum(size(r) for r in v) for k, v in buckets.items()}
+    if not sum(available.values()):
+        raise ValueError("no training records remain after near-dedup")
     method = config.get("method", "temperature")
     learned = None
     if method == "temperature":
@@ -152,7 +169,7 @@ def plan(config):
             "validation_samples": sum(r["split"] == "validation" for r in records),
             "replacement": False,
             "validation_policy": "all-original-validation-records-unmixed",
-            "shortfall_reasons": "availability, intact-sample granularity, family cap or selection filters",
+            "shortfall_reasons": "availability, intact-sample granularity, family cap, near-dedup or selection filters",
             "tokenizer": records[0]["tokenizer"] if manifest["kind"] == "cpt" else None,
             "learned_experiment": learned.get("experiment_uid") if learned else None,
         }
@@ -202,6 +219,11 @@ def build(config, output):
                         values.append(value)
                     jsonl(staging / (split + (".vision" if vision else "") + ".jsonl"), values)
         write_json(staging / "images.json", media)
+        if manifest.get("near_dedup"):
+            shutil.copytree(config["near_dedup_report"], staging / "near-dedup")
+            verify(staging / "near-dedup")
+            if sha256(staging / "near-dedup" / "checksums.sha256") != manifest["near_dedup"]["inventory_sha256"]:
+                raise ValueError("near-dedup report changed while building mixture")
         if config.get("method") in {"doremi", "regmix"}:
             weight_path = Path(config["weights_file"])
             shutil.copyfile(weight_path, staging / "learned-weights.json")
@@ -224,6 +246,13 @@ def verify_mixture(path):
     if manifest.get("schema_version") != "finflow-mixture-dataset-v1":
         raise ValueError("not a mixture package")
     rows = read_jsonl(Path(path) / "records.jsonl")
+    if manifest.get("near_dedup"):
+        verify(path / "near-dedup")
+        if sha256(path / "near-dedup" / "checksums.sha256") != manifest["near_dedup"]["inventory_sha256"]:
+            raise ValueError("near-dedup report fingerprint mismatch")
+        decisions = {d["id"]: d for d in read_jsonl(path / "near-dedup" / "decisions.jsonl")}
+        if any(r["id"] not in decisions or decisions[r["id"]]["action"] != "keep" for r in rows):
+            raise ValueError("mixture contains an excluded near-duplicate")
     if len({r["id"] for r in rows}) != len(rows):
         raise ValueError("duplicate selection IDs")
     if Counter(r["split"] for r in rows) != Counter({"train": manifest["train_samples"], "validation": manifest["validation_samples"]}):

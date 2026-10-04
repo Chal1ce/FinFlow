@@ -22,6 +22,7 @@ PDF、图片、表格和派生文件保存在本地，SQLite 记录任务、版�
 - **生成方法与配比**：知识提炼、教材化与事实列表；Self-Instruct、答案反推、Evol-Instruct、CodecLM 证据适配，图像描述及多轮问答；固定/温度配比与 DoReMi、RegMix 本地代理实验。
 - **自动运行与追溯**：每日增量采集、任务重试、断点恢复、去重、血缘查询及不可变发布。
 - **数据质量与覆盖**：自动生成 CPT/SFT 统计报告、覆盖缺口与版本差异，见[报告指南](docs/quality-report.md)。
+- **跨版本近似去重**：SQLite 增量 MinHash 索引、重复关系与可追溯配比过滤，见[去重指南](docs/near-dedup.md)。
 - **应用连接**：飞书、Telegram、Discord、Slack 的命令、PDF 导入、图表人工复核和日报；MCP 接口支持外部助手调用。
 
 ## 处理流程
