@@ -43,6 +43,10 @@
     "source_sha256": "dba55d87bd7e9bc4788be163d55bb270023101c8d27dd59fa4007366a9130660",
     "coverage": "full"
   },
+  "near-dedup": {
+    "source_sha256": "f3d557ac883c66d286125881e1e15fff2e42b315bfc490b18a9a0f22cabf9c41",
+    "coverage": "full"
+  },
   "pretraining": {
     "source_sha256": "94bdbe1a7e3313b19c0f1de159caa98ca1b1630c6987265f0ed95651609cad80",
     "coverage": "full"
