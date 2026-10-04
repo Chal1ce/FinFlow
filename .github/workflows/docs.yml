@@ -45,12 +45,15 @@ jobs:
         run: bundle exec jekyll build --source _build/docs-source/en --destination _site/en --config _build/docs-source/en/_config.yml,_build/docs-source/en/_config.language.yml
       - name: Preserve old documentation URLs
         run: python scripts/prepare_docs.py --finalize
-      - uses: actions/upload-pages-artifact@v4
+      # Mirrors and pull requests validate the site without publishing it.
+      - name: Upload public documentation
+        if: github.repository == 'Chal1ce/FinFlow' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.repository == 'Chal1ce/FinFlow' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:

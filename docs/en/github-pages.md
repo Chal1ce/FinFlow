@@ -28,8 +28,11 @@ Change the previous branch-based `main` + `/docs` method. See
 - [English](https://chal1ce.github.io/FinFlow/en/).
 
 Old top-level `.html` URLs redirect to matching Chinese pages; JavaScript preserves
-query strings and fragments. Documentation changes on `main` publish automatically;
-pull requests build without deploying. See [Writing docs](docs-authoring.md).
+query strings and fragments. Documentation changes on `Chal1ce/FinFlow`'s `main`
+publish automatically. Pull requests, the private `fin-doc-governance` mirror,
+and other repositories only build: they neither upload Pages artifacts nor deploy.
+A **Skipped** deploy job is expected in those runs. Manual publication also requires
+the public repository's `main`. See [Writing docs](docs-authoring.md).
 The common configuration is `docs/_config.yml`; Just the Docs is fixed at `v0.12.0`.
 
 ## Local build
@@ -48,6 +51,8 @@ Generated files are ignored by Git. Builds do not call OCR/models. Dependencies,
 theme downloads, and Mermaid need internet. For renaming, change the script's
 default base URL and repository links. For a custom domain, update `url`, pass
 `--baseurl ''` to both workflow script steps, and configure the domain in Pages.
+To publish from a renamed repository or a fork, also update both
+`github.repository == 'Chal1ce/FinFlow'` conditions in the upload step and deploy job.
 
 ## Troubleshooting
 
@@ -57,3 +62,9 @@ revisions, dependencies, or theme downloads; deployment errors may involve Pages
 enablement, permissions, or environment restrictions. Check deployment success
 before investigating a 404. URL casing must match `FinFlow`. Committing a workflow
 alone does not enable Pages.
+
+For `No artifacts named "github-pages"`, inspect the upload log and Artifacts list
+for the same run. If the upload succeeded but the artifact is unavailable, select
+**Re-run all jobs** in the public repository to rebuild and upload it again,
+instead of rerunning only `deploy`. If it persists, check GitHub Actions/Pages
+service status and whether the artifact was deleted.

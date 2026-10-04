@@ -33,7 +33,9 @@ parent: 运维与排错
 ## 日常更新
 
 中文源文件在 `docs/*.md`，英文在 `docs/en/*.md`，图片共用 `docs/assets/images/`。
-`main` 上的文档、构建脚本或工作流改动自动部署；PR 只构建，不发布。
+`Chal1ce/FinFlow` 的 `main` 上的文档、构建脚本或工作流改动自动部署。
+PR、闭源同步仓库 `fin-doc-governance` 和其他仓库只构建，不上传 Pages 产物、不部署；
+这些运行中的 `deploy` 显示 **Skipped** 是预期行为。手动发布也必须选择公开仓库的 `main`。
 新增翻译和更新原文时见[文档维护指南](docs-authoring.md)。
 
 Just the Docs 固定为 `v0.12.0`。共同设置在 `docs/_config.yml`；语言配置与编辑链接
@@ -57,6 +59,8 @@ python3 scripts/prepare_docs.py --finalize
 
 默认地址固定为 `https://chal1ce.github.io/FinFlow/`。改名时同步修改脚本默认 `--baseurl`、
 `docs/_config.yml` 的 `url` 和仓库链接，以及 README、文档的 GitHub / Pages 链接。
+迁移到其他仓库或使用 fork 发布时，还需修改工作流上传步骤和 `deploy` 的两处
+`github.repository == 'Chal1ce/FinFlow'` 条件，使其匹配自己的发布仓库。
 自定义域名需修改 `url`，在工作流两处脚本命令传 `--baseurl ''`，并配置 Pages 域名。
 
 ## 发布失败排查
@@ -65,6 +69,9 @@ python3 scripts/prepare_docs.py --finalize
 - 在 **Documentation** 中区分构建失败与部署失败，查看失败步骤日志。
 - 构建失败常见于 front matter、主题下载、依赖安装；新翻译还需登记原文版本。
 - 部署失败时检查 Pages 是否启用、Actions 权限及 `github-pages` 环境限制。
+- 出现 `No artifacts named "github-pages"` 时，查看同次运行的上传日志和 Artifacts 列表。
+  上传成功但产物不可见时，不要仅重跑 `deploy`；在公开仓库选择 **Re-run all jobs**，
+  重新构建并上传产物。若仍失败，再检查 GitHub Actions/Pages 服务状态和产物是否被删除。
 - 404 时先确认 `deploy` 已成功；路径 `FinFlow` 大小写需要一致。
 
 提交工作流不等于网站已经发布。首次部署结果以 Actions 和 Pages 设置为准。
