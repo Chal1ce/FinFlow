@@ -46,6 +46,8 @@ flowchart LR
 每日飞轮生成训练数据文件；目标模型训练由下游训练程序执行。SFT 可独立运行或作为每日流程的可选阶段，默认关闭。
 DoReMi/RegMix 是另外显式启动的小型代理训练实验，用于学习配比，不随每日任务自动运行。
 
+可选启用[每日训练版本发布](docs/training-publication.md)：统一 `.env` 配置，自动汇总、近似去重、配比、版本校验及发布；SQLite 记录阶段恢复和血缘，失败保留上一版 `latest`，生成按日 JSON/Markdown 报告。
+
 ## 快速开始
 
 需要 Python 3.10 或以上。macOS / Linux 在项目根目录执行：
@@ -63,7 +65,7 @@ Windows 安装方式见[运行前检查](docs/local_operations.md#1-运行前检
 ### 每日采集 → 治理 → 预训练数据
 
 按[飞轮运行说明](docs/data-flywheel.md)填写 OCR、视觉/审核模型和目标 tokenizer，
-并在 [config/flywheel.json](config/flywheel.json) 中确认来源训练准入。
+来源训练准入等日常参数可用同一个 `.env` 中的 `FIN_DOC_FLYWHEEL_POLICY` 覆盖默认配方。
 默认生成原文和图表描述；翻译、改写需另行启用并配置模型。
 
 ```sh

@@ -11,6 +11,38 @@ from pathlib import Path
 from core.flywheel_files import safe_path, sha256, write_json
 from storage.state_store import utc_now
 from training.flywheel_corpus import checksums, jsonl, verify
+from core.ids import stable_uid
+
+
+def evidence_identity(store, config_version):
+    """Downstream SFT/publication artifacts must not invalidate upstream evidence."""
+    types = (
+        "flywheel-governed",
+        "ocr-image-output",
+        "table-representation",
+        "visual-context",
+        "training-transform",
+        "governance-model-response",
+    )
+    return stable_uid(
+        "release-v7-inputs-v2",
+        config_version,
+        [
+            tuple(r)
+            for r in store.connection.execute(
+                "SELECT candidate_uid,artifact_uid,status,decision_json FROM training_candidate ORDER BY candidate_uid"
+            )
+        ],
+        [tuple(r) for r in store.connection.execute("SELECT * FROM visual_asset ORDER BY visual_asset_uid")],
+        [tuple(r) for r in store.connection.execute("SELECT * FROM visual_description ORDER BY description_uid")],
+        store.records("governed"),
+        [
+            tuple(r)
+            for r in store.connection.execute(
+                "SELECT artifact_uid,sha256 FROM artifact WHERE artifact_type IN (?,?,?,?,?,?) ORDER BY artifact_uid", types
+            )
+        ],
+    )
 
 
 def publish_evidence(root, store, release_id):
@@ -29,9 +61,14 @@ def publish_evidence(root, store, release_id):
     roots = {x["artifact_uid"] for x in candidates + visuals + descriptions}
     roots |= {json.loads(x["decision_json"])["artifact_uid"] for x in candidates if x["decision_json"]}
     roots |= {r[0] for r in store.connection.execute("SELECT artifact_uid FROM artifact WHERE artifact_type='flywheel-governed'")}
-    roots |= {r[0] for r in store.connection.execute("SELECT artifact_uid FROM artifact WHERE artifact_type IN "
-                                                   "('ocr-image-output','table-representation','visual-context',"
-                                                   "'training-transform','governance-model-response')")}
+    roots |= {
+        r[0]
+        for r in store.connection.execute(
+            "SELECT artifact_uid FROM artifact WHERE artifact_type IN "
+            "('ocr-image-output','table-representation','visual-context',"
+            "'training-transform','governance-model-response')"
+        )
+    }
     edges = [dict(row) for row in store.connection.execute("SELECT * FROM artifact_edge ORDER BY child_uid,parent_uid,relation")]
     closure = set(roots)
     while True:

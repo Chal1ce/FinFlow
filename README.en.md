@@ -46,6 +46,8 @@ FinFlow generates training files. A downstream training program trains the targe
 DoReMi/RegMix run explicitly requested small proxy experiments to learn mixtures; daily jobs never launch them automatically.
 SFT runs independently or as an optional daily stage, disabled by default.
 
+Optional [daily training publication](docs/en/training-publication.md) connects snapshots, near deduplication, mixtures, verification and version publication through one `.env`. SQLite tracks recovery and lineage; failures retain the previous `latest`. Daily reports are available as JSON/Markdown.
+
 ## Quick start
 
 Python 3.10+ is required. The daily flywheel currently runs on macOS/Linux:
@@ -59,8 +61,7 @@ cp -n .env.example .env
 
 Add missing fields to an existing `.env` without overwriting it. Follow the
 [flywheel guide](docs/en/data-flywheel.md) to configure OCR, vision, independent
-review, and the target tokenizer. Confirm source admission in
-[config/flywheel.json](config/flywheel.json). Defaults use original text and visual
+review, and the target tokenizer. Use `FIN_DOC_FLYWHEEL_POLICY` in the same `.env` to override source admission and daily recipe defaults. Defaults use original text and visual
 descriptions; translation/rewriting require additional configuration.
 
 ```sh

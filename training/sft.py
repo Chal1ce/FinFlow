@@ -265,6 +265,36 @@ class SFTBuilder:
         self.store.put("sft-job", job_uid, {"path": self.context.relative_path(path), "sha256": sha256(path), "artifact_uid": artifact})
         return result
 
+    def reusable_snapshot(self, release):
+        """Recover/reuse a complete daily export for the same evidence, policy and recipe."""
+        release_path = safe_path(self.root / "published" / "flywheel", release)
+        expected = {"path": self.context.relative_path(release_path), "manifest_sha256": sha256(release_path / "manifest.json")}
+        for path in sorted((self.root / "training" / "sft" / "datasets").glob("*"), reverse=True):
+            if not path.is_dir() or path.name.startswith("."):
+                continue
+            manifest = json.loads((path / "manifest.json").read_text(encoding="utf-8"))
+            if (
+                manifest.get("recipe_uid") != self.config.version
+                or manifest.get("release") != expected
+                or manifest.get("source_policy_sha256") != digest(self.source_policy)
+                or manifest.get("status") != "success"
+            ):
+                continue
+            verify_dataset(path)
+            self._index(path, manifest)
+            return {
+                "status": "reused",
+                "path": str(path),
+                "dataset_id": manifest["dataset_id"],
+                "samples": manifest["samples"],
+                "images": manifest["images"],
+                "modalities": manifest["modalities"],
+                "pending_jobs": 0,
+                "model_requests": 0,
+                "scope": "cumulative_snapshot",
+            }
+        return None
+
     def build(self, dataset_id, release, *, max_seconds=None):
         if not dataset_id or Path(dataset_id).name != dataset_id or dataset_id in {".", ".."}:
             raise ValueError("dataset_id must be a directory name")

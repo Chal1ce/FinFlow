@@ -48,6 +48,14 @@ def report_text(report):
             f"\n本轮数据集：{json.dumps(latest.get('dataset', {}), ensure_ascii=False)}"
             f"\nSFT 数据集：{json.dumps(latest.get('sft_dataset', {'status': 'disabled'}), ensure_ascii=False)}"
         )
+        release = latest.get("training_release", {})
+        text += f"\n本日新增：{json.dumps(report.get('additions', {}), ensure_ascii=False)}"
+        text += f"\n训练发布：{release.get('status', 'disabled')}；版本：{(release.get('latest') or {}).get('release_id', 'none')}"
+        for kind, track in release.get("tracks", {}).items():
+            text += (
+                f"\n{kind.upper()}：输入 {track['input_samples']}，去重排除 {track['near_dedup']['excluded']}，"
+                f"训练 {track['train_samples']}，验证 {track['validation_samples']}，配额缺口 {track['shortfall']} {track['unit']}"
+            )
         if latest.get("errors"):
             text += "\n阶段异常：" + json.dumps(latest["errors"], ensure_ascii=False)[:3000]
     else:

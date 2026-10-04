@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from config import load_config
 from workflow.flywheel_config import ModelRole, digest
 from training.sft_strategies import STRATEGIES, supported
+from workflow.training_release_config import overlay
 
 TEXT_TASKS = {"document_qa", "extraction", "table_calculation"}
 VISION_TASKS = {"visual_qa", "table_structure", "visual_description", "visual_conversation"}
@@ -35,7 +36,7 @@ class SFTConfig:
     def __init__(self, path):
         load_config()  # Load .env with the project's parser, never through a shell.
         self.path = Path(path).resolve()
-        self.policy = json.loads(self.path.read_text(encoding="utf-8"))
+        self.policy = overlay(json.loads(self.path.read_text(encoding="utf-8")), "FIN_DOC_SFT_POLICY")
         if not isinstance(self.policy, dict):
             raise ValueError("SFT recipe must be an object")
         tasks = self.policy.get("tasks", [])
