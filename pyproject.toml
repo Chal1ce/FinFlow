@@ -15,6 +15,7 @@ dependencies = [
   "requests>=2.31",
   "Pillow>=10.0",
   "PyMuPDF>=1.24",
+  "jsonschema>=4.23,<5",
   "tokenizers>=0.20",
 ]
 
@@ -36,7 +37,8 @@ py-modules = ["config"]
 include = ["agent*", "core*", "delivery*", "ingestion*", "integrations*", "processing*", "qc*", "remote*", "spiders*", "storage*", "training*", "workflow*"]
 
 [tool.setuptools.package-data]
-agent = ["schemas/*.json", "tools.json", "trainers/sft/*.json", "trainers/sft/requirements.txt"]
+agent = ["schemas/*.json", "tools.json", "trainers/sft/*.json", "trainers/sft/requirements.txt",
+         "trainers/rl/*.json", "trainers/rl/requirements.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

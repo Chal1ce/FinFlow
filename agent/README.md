@@ -1,6 +1,6 @@
 # FinFlow Agentic RL V0.1 设计
 
-状态：2026-10-19 更新。已实现既有治理资产导入，以及可选的离线 OCR 图片摸底/报告校验；本目录还包含 V0.1 基础接口契约与合成样例，以及多模态扩展设计。已新增单卡普通文本/视觉SFT启动入口；Agent交互环境、视觉工具、Agent SFT/RL入口和实验结果仍待开发。样例轨迹均标记为 `design_example`，未执行、未评分、不可直接用于训练。
+状态：2026-10-19 更新。已实现治理资产导入、普通文本/视觉 SFT 启动器，以及研究任务的可执行环境、Decimal 计算/私有奖励、合成 task 构建、参考工具 SFT 导出和单卡多轮 GRPO 启动器。GPU 训练与实验结果尚未执行；图片观察和治理排障环境继续开发。旧样例轨迹仍为 `design_example`，未执行、未评分、不可直接用于训练。当前可运行入口见[RL 指南](trainers/rl/README.md)。
 
 目录约定（2026-10-19）：`agent/` 是本项目 Agentic RL 的统一入口，集中保存财报取证、数据治理与故障排查的设计、契约、样例，以及后续环境、工具、验证器和训练适配实现。
 
@@ -8,7 +8,7 @@
 
 实施约定：直接复用 FinFlow 已有来源决定、候选审核、图片关联和血缘，设计明确后就写代码并按实际错误迭代。新增 Agent 功能不要求整批数据重新校准或人工校对；需要定位的具体 bad case 单独处理。
 
-入口：[单卡SFT训练](trainers/sft/README.md)、[复用治理资产（可运行）](assets.md)、[OCR 图片摸底（可选诊断）](inventory.md)、[SFT 与 Agent RL 联合设计](sft-and-rl.md)、[多模态设计](multimodal.md)、[任务 schema](schemas/task.schema.json)、[轨迹 schema](schemas/trajectory.schema.json)、[工具表](tools.json)、[案例与谓词说明](examples/README.md)。
+入口：[多轮 Agentic RL 与工具 SFT](trainers/rl/README.md)、[普通单卡SFT训练](trainers/sft/README.md)、[复用治理资产（可运行）](assets.md)、[OCR 图片摸底（可选诊断）](inventory.md)、[SFT 与 Agent RL 联合设计](sft-and-rl.md)、[多模态设计](multimodal.md)、[任务 schema](schemas/task.schema.json)、[轨迹 schema](schemas/trajectory.schema.json)、[工具表](tools.json)、[案例与谓词说明](examples/README.md)。
 
 ## 1. 目标与第一版范围
 
@@ -58,7 +58,7 @@ flowchart TB
     H --> V[独立 Verifier]
     T --> V
     V --> D[离线示范筛选 / 在线 RL 奖励]
-    D --> S[SFT 与 verl GRPO 适配]
+    D --> S[SFT 与 ms-swift 多轮 GRPO 适配]
     S --> P
     V --> Q[冻结评测与开发集错误分析]
 ```
@@ -94,6 +94,8 @@ flowchart TB
 轨迹保存 action、call_id、observation_id、结构化工具返回、可引用证据、错误码与状态指纹。模型/检查点、tokenizer、chat template、采样参数、工具表、语料、环境、代码和奖励版本均绑定。
 
 在线 RL 的 token IDs、行为策略 logprobs 和 assistant loss mask 由训练后端原生捕获并以有哈希的 sidecar 关联；普通 API 文本日志只能用于分析或离线示范构建。工具观察和用户输入不计入策略损失，不能把旧文本重新分词后冒充原策略采样记录。
+
+已实现的研究环境先使用 `finflow-research-episode-v1` 运行日志，绑定 task/fixture/oracle/tools 的 hash，并另存原生 token sidecar。它是可执行研究链路的具体格式；V0.1 通用 `trajectory.schema.json` 的完整导出及动作重放器仍待实现。
 
 `train_eligible` 表示允许进入适配器，不等于自动可训练；适配器还需核对捕获完整性、行为策略版本和算法允许的 policy lag。合成设计轨迹、基础设施中断、未执行重放的轨迹均不准入。
 
@@ -197,7 +199,7 @@ Bad case 分类：检索漏召回、实体/期间/口径错、取数错、单位
 
 ## 9. 训练与评测
 
-训练侧优先适配 verl 多轮工具接口与 GRPO，核心环境不导入 GPU 框架。先分别训练/评价 research 与 operations，再做任务混合与联动。V0.1 模型候选为支持工具调用的 1–4B 可训练模型；具体 checkpoint、全参/LoRA和并发由 GPU profiling 决定，不预设设备可容纳性。
+首条训练链路采用 ms-swift 多轮 GRPO，与 SFT 共用训练栈；核心环境不导入 GPU 框架。用户已确定 4090D × 1、Qwen/Qwen3.5-0.8B；当前配方为 BF16 LoRA r8、每题 4 条在线轨迹、vLLM colocate。实际显存和更新效果待 GPU 运行。先完成 research，再接 operations，之后做混合与联动；verl 保留为后续适配参考。
 
 比较基础模型+工具、工具 SFT、SFT+GRPO。固定模型家族、环境、题集、预算、采样与上下文；记录额外数据和训练量，必要时增加继续 SFT 对照。用独立保留任务检查效果，不能用训练奖励均值代替业务成功率。
 
@@ -218,25 +220,25 @@ Bad case 分类：检索漏召回、实体/期间/口径错、取数错、单位
 
 ## 10. 代码与工件布局（拟实施）
 
-目前已有设计、schema、工具契约与案例，以及 CLI、治理资产 adapter 和可选 OCR inventory；其余 Python 模块按实施阶段创建。
+目前已有设计、schema、工具契约与案例，以及 CLI、治理资产 adapter、研究环境与 SFT/RL 启动器；视觉和 operations 等扩展继续实施。
 
 ```text
 agent/
-  cli.py                     # sft / import-assets / inventory / verify-inventory（已实现）
+  cli.py                     # sft / rl-build / rl-sft / rl / rl-report / 资产命令
   README.md                  # 总体设计与实施路线（已有）
   multimodal.md              # 页面与OCR区域的多模态扩展设计（已有）
   schemas/                   # 任务/环境/验收/轨迹契约（已有）
   tools.json                 # 工具输入契约（已有）
   examples/                  # 四个合成设计案例（已有）
   contracts/                 # 版本和语义校验
-  environment/               # reset/step/close，episode隔离
+  environment/               # 冻结研究case加载、episode和4个研究工具（已实现）
   tools/                     # research / operations 注册与执行
   adapters/                  # 治理资产导入/OCR摸底已实现；stage适配待实现
-  verifiers/                 # 私有oracle消费
-  datasets/                  # 构建/划分/示范导出
+  verifiers/                 # 私有研究oracle与终局奖励（已实现）
+  datasets/                  # 合成研究任务与实际执行的参考SFT导出（已实现）
   replay/                    # 日志检查与动作重放
   trainers/sft/              # 单卡Qwen3.5-0.8B LoRA启动（已实现，未GPU实跑）
-  trainers/verl/             # 多轮RL适配（待实现）
+  trainers/rl/               # 单卡ms-swift多轮GRPO、原生捕获、报告（已实现，未GPU实跑）
   evaluation/                # 冻结评测与报告
 data/agent/
   snapshots/ cases/ episodes/ releases/ evaluations/
@@ -244,7 +246,7 @@ data/agent/
 
 `agent/adapters/` 对接现有证据、服务与存储接口；Agent 环境、任务和训练逻辑集中在 `agent/`，现有数据处理模块继续提供基础能力。真实数据、运行轨迹与 checkpoint 放在被忽略的 `data/agent/` 下，以 manifest/hash 关联。
 
-`agent*` 已加入 setuptools discovery，基础 schema 与 tools.json 随包分发。GPU依赖单独 extra，具体版本在首个训练环境验证后锁定。日常 `.env` 只配置启用/路径和模型连接，完整实验配方为版本化 JSON；manifest 记录解析后的配置 hash，不写 key。治理导入与现有视觉 SFT 共用 `training/sft_evidence.py`，普通文本/视觉SFT训练命令已接ms-swift，Agent交互环境、视觉工具及Agent SFT/RL仍待实现。
+`agent*` 已加入 setuptools discovery，基础 schema、tools.json 及 SFT/RL 配方随包分发。GPU依赖独立 requirements；RL 的 ms-swift 固定到已查阅的上游 commit，GPU 兼容性尚未实跑。完整实验配方为版本化 JSON，manifest 记录实际依赖、参数及代码 hash，不写 key。治理导入与视觉 SFT 共用 `training/sft_evidence.py`；研究工具与 Agent SFT/RL 入口已实现，真实财报任务生成、视觉工具和 operations 环境继续开发。
 
 Git 跟踪设计、schema、代码、非敏感配方和小型合成 fixture；真实语料、oracle、轨迹和 checkpoint 保存在被忽略的数据目录，以文件清单/内容 hash 引用。公开数据包须独立检查来源权利。
 
@@ -271,4 +273,4 @@ P1/P2 的验证应覆盖真实状态变化及错误恢复，不只检查返回�
 
 ## 13. 当前待定项
 
-模型/GPU与训练规模；来源/公司/故障族划分的扩展；具体训练栈版本；有界 stage adapter；V0.2媒体schema、视觉fixture及多轮工具图像适配。来源与资产决定复用已有治理记录，具体缺失在接入时报错处理；P1 可直接使用已有合成案例开发。
+首次 GPU 执行与实际显存/奖励分布；真实财报任务 adapter；operations 有界 stage adapter；通用轨迹导出与动作重放；V0.2 媒体 schema、视觉 fixture 及多轮工具图像适配。来源与资产决定复用已有治理记录，具体缺失在接入时报错处理。

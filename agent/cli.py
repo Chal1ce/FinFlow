@@ -11,7 +11,7 @@ from agent.adapters.ocr_inventory import InventoryOptions, build_inventory, veri
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="FinFlow agent data preparation")
+    parser = argparse.ArgumentParser(description="FinFlow agent data and training")
     commands = parser.add_subparsers(dest="command", required=True)
     inventory = commands.add_parser("inventory", help="read-only OCR media audit and pending human review queue")
     inventory.add_argument("--input", type=Path, required=True, help="OCR output directory, result file, or parent of OCR outputs")
@@ -43,8 +43,61 @@ def main(argv=None):
     sft.add_argument("--max-samples", type=int)
     sft.add_argument("--resume-from-checkpoint", type=Path)
     sft.add_argument("--prepare-only", action="store_true", help="serialize inputs and command without starting training")
+    rl_build = commands.add_parser("rl-build", help="build executable synthetic research tasks for first GRPO training")
+    rl_build.add_argument("--output", type=Path, required=True)
+    rl_build.add_argument("--train-cases", type=int, default=128)
+    rl_build.add_argument("--validation-cases", type=int, default=32)
+    rl_build.add_argument("--seed", type=int, default=42)
+    rl_sft = commands.add_parser("rl-sft", help="execute reference tools and export offline Agent SFT demonstrations")
+    rl_sft.add_argument("--dataset", type=Path, required=True)
+    rl_sft.add_argument("--output", type=Path, required=True)
+    rl = commands.add_parser("rl", help="train single-GPU multi-turn financial research GRPO")
+    rl.add_argument("--dataset", type=Path, required=True)
+    rl.add_argument("--output", type=Path, required=True)
+    rl.add_argument("--config", type=Path)
+    rl.add_argument("--model", help="model ID or local model directory")
+    rl.add_argument("--max-steps", type=int)
+    rl.add_argument("--sft-adapter", type=Path, help="initialize a new RL run from an SFT LoRA adapter")
+    rl.add_argument("--resume-from-checkpoint", type=Path)
+    rl.add_argument("--prepare-only", action="store_true", help="serialize the command and frozen cases without starting training")
+    rl_report = commands.add_parser("rl-report", help="summarize saved episode outcomes and failure reasons")
+    rl_report.add_argument("--run", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "rl-sft":
+            from agent.datasets.research_sft import export_research_sft
+
+            result = export_research_sft(args.dataset, args.output)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "rl-report":
+            from agent.trainers.rl.report import summarize
+
+            print(json.dumps(summarize(args.run), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "rl-build":
+            from agent.datasets.research import build_research_dataset
+
+            result = build_research_dataset(
+                args.output, train_cases=args.train_cases, validation_cases=args.validation_cases, seed=args.seed
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "rl":
+            from agent.trainers.rl.runner import DEFAULT_CONFIG as RL_CONFIG, run_rl
+
+            result = run_rl(
+                args.dataset,
+                args.output,
+                config=args.config or RL_CONFIG,
+                model=args.model,
+                max_steps=args.max_steps,
+                sft_adapter=args.sft_adapter,
+                resume_from_checkpoint=args.resume_from_checkpoint,
+                prepare_only=args.prepare_only,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result["status"] != "failed" else 1
         if args.command == "sft":
             from agent.trainers.sft.runner import DEFAULT_CONFIG, run_sft
 

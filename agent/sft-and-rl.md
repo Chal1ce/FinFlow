@@ -1,6 +1,6 @@
 # OCR 图像资产、视觉 SFT 与 Agentic RL 的联合设计
 
-状态：2026-10-19 设计稿。用户已确认接入 PDF 页面及 OCR 检测区域。本设计在[多模态接口设计](multimodal.md)上，明确共用资产、三类训练数据、实施边界和验收顺序。本文新增任务名与目录为拟实施内容，尚未加入现有配方或 V0.1 机器契约。
+状态：2026-10-19 更新。用户已确认接入 PDF 页面及 OCR 检测区域。本设计明确共用资产、三类训练数据与多模态扩展。普通 SFT 启动器和文本/结构化研究任务的工具环境、参考 Agent SFT 导出、多轮 GRPO 入口已实现，见[RL 运行指南](trainers/rl/README.md)；视觉环境与工具仍为后续设计，尚无 GPU 训练结果。
 
 已实现[治理资产导入](assets.md)，Agent 与视觉 SFT 共用 `EvidenceLoader`，继承既有候选审核、图片关联与血缘。已有结果直接使用，设计明确就进入代码实现，按实际错误迭代。[OCR 图片摸底](inventory.md) 是旧产物的可选诊断，不是开发前置步骤。
 
@@ -207,7 +207,7 @@ agent/
   tools/                    # 图片查看/裁剪/取数、受控处理
   verifiers/                # 视觉答案与处理后状态验收
   trainers/sft/             # 普通文本/视觉SFT单卡LoRA入口已实现；工具轨迹待接
-  trainers/verl/            # 多轮 RL 适配
+  trainers/rl/              # 已实现 ms-swift 多轮 GRPO；视觉适配继续开发
 data/
   media/                    # 现有上游视觉资产
   training/sft/             # 现有直接 SFT 工件
@@ -216,7 +216,7 @@ data/
     releases/ evaluations/ # 独立版本的 Agent SFT 与 RL 数据产品
 ```
 
-治理资产 adapter、共享 SFT loader、可选 OCR inventory 与普通文本/视觉SFT单卡启动入口已实现；工具环境与Agent SFT/RL入口继续开发。发布 manifest 绑定源 release、上游决定与媒体；后续任务构建继续接现有 split 逻辑，数据构建和模型训练各自显式启动。
+治理资产 adapter、共享 SFT loader、普通文本/视觉 SFT 启动器，以及结构化研究环境、参考 Agent SFT 导出和多轮 GRPO 入口已实现；视觉与 operations 环境继续开发。任务、工具与运行以 manifest/hash 绑定，数据构建和模型训练各自显式启动。
 
 ## 9. 实施里程碑与比较方式
 
@@ -233,4 +233,4 @@ data/
 
 分别报告数值/单位/期间/口径准确率、证据支持、表格完整性、工具任务成功率、真实修复率、正常保持率、转交/弃答 precision 与 recall、越权/保护集合、动作/图像/tokens/时延及环境无效率。图像是否实际传入模型与其使用效果分别验收；上传了图片不证明答案依赖图片。
 
-当前已实现治理资产接入与[单卡SFT启动入口](trainers/sft/README.md)，尚无视觉环境、教师 rollout 或实际SFT/RL训练结果。接下来直接实现环境、视觉工具和 Agent exporter，复用现有视觉 SFT；模型/GPU 与训练后端在启动模型任务时配置。只有实际遇到的关联错误或误判需要回到具体样本处理。
+当前已实现治理资产接入、[普通单卡 SFT](trainers/sft/README.md) 和[研究工具 Agent SFT/多轮 GRPO](trainers/rl/README.md)。机器为 4090D × 1，模型为 Qwen/Qwen3.5-0.8B；尚无 GPU 实跑结果。接下来运行首轮训练，再接真实财报任务、视觉工具与 operations 环境。复用现有治理与视觉 SFT，实际遇到的关联错误或误判回到具体样本处理。

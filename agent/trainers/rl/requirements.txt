@@ -1,0 +1,6 @@
+# Gym hooks and exact-token multi-turn contract inspected at this upstream revision.
+ms-swift @ git+https://github.com/modelscope/ms-swift.git@2efb43ffe61294735be6816abca991fb2ca16011
+transformers>=5.9,<6
+vllm>=0.18,<0.19
+qwen-vl-utils>=0.0.14
+peft
