@@ -1,0 +1,62 @@
+{
+  "schema_version": "0.1.0",
+  "task_id": "t-6c21",
+  "track": "research",
+  "accepted_outcomes": [
+    "answered"
+  ],
+  "checks": [
+    {
+      "kind": "research_result",
+      "metric_id": "operating_cash_flow_share_change",
+      "expected_value": "2.00",
+      "unit": "percentage_point",
+      "entity_id": "entity-a01",
+      "scope": "consolidated",
+      "periods": [
+        "2023",
+        "2024"
+      ],
+      "decimal_places": 2,
+      "evidence_alternatives": [
+        [
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3"
+        ]
+      ],
+      "reference_program": {
+        "operation": "pp_difference",
+        "operands": [
+          {
+            "operation": "percentage",
+            "operands": [
+              {
+                "cell_ref": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3"
+              },
+              {
+                "cell_ref": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2"
+              }
+            ]
+          },
+          {
+            "operation": "percentage",
+            "operands": [
+              {
+                "cell_ref": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1"
+              },
+              {
+                "cell_ref": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "evidence_observed",
+      "all_submitted_refs": true
+    }
+  ]
+}

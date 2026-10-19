@@ -1,0 +1,103 @@
+{
+  "schema_version": "0.1.0",
+  "synthetic": true,
+  "scope_id": "scope-a173",
+  "track": "research",
+  "initial_state_version": 0,
+  "documents": [
+    {
+      "document_id": "doc-c31",
+      "work_id": "work-b29",
+      "entity_id": "entity-a01",
+      "report_period": "2024",
+      "currency": "CNY",
+      "scale": "million",
+      "tables": [
+        {
+          "table_id": "table-a12",
+          "title": "营业收入与经营活动现金流量净额",
+          "scope": "consolidated",
+          "page": 12,
+          "cells": [
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+              "row": "营业收入",
+              "period": "2023",
+              "value": "1000",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+              "row": "经营活动现金流量净额",
+              "period": "2023",
+              "value": "120",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+              "row": "营业收入",
+              "period": "2024",
+              "value": "1100",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3",
+              "row": "经营活动现金流量净额",
+              "period": "2024",
+              "value": "154",
+              "unit": "CNY_million"
+            }
+          ]
+        },
+        {
+          "table_id": "table-b07",
+          "title": "营业收入与经营活动现金流量净额",
+          "scope": "parent_company",
+          "page": 28,
+          "cells": [
+            {
+              "cell_id": "cell:5c2f85c858b2aeffa9a4666e3c2b559c9a426519eb324f6333e233efcaf59e85:0",
+              "row": "营业收入",
+              "period": "2023",
+              "value": "800",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:5c2f85c858b2aeffa9a4666e3c2b559c9a426519eb324f6333e233efcaf59e85:1",
+              "row": "经营活动现金流量净额",
+              "period": "2023",
+              "value": "40",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:5c2f85c858b2aeffa9a4666e3c2b559c9a426519eb324f6333e233efcaf59e85:2",
+              "row": "营业收入",
+              "period": "2024",
+              "value": "900",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:5c2f85c858b2aeffa9a4666e3c2b559c9a426519eb324f6333e233efcaf59e85:3",
+              "row": "经营活动现金流量净额",
+              "period": "2024",
+              "value": "90",
+              "unit": "CNY_million"
+            }
+          ]
+        }
+      ],
+      "entity_name": "示例企业 A",
+      "report_title": "示例企业 A 2024 年度合成报告"
+    }
+  ],
+  "files": [],
+  "recovery_sources": [],
+  "database": {
+    "tasks": [],
+    "sources": [],
+    "candidates": [],
+    "escalations": []
+  },
+  "protected_subjects": [],
+  "lineage_edges": []
+}

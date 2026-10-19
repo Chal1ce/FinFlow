@@ -1,0 +1,162 @@
+{
+  "schema_version": "0.1.0",
+  "record_kind": "design_example",
+  "episode_id": "design-ops-003",
+  "task_id": "t-5f03",
+  "track": "operations",
+  "binding": {
+    "case_sha256": "e45daaec1823a2076caf63531269d825b808d94f12ae36d2e6df039e2736b0e0",
+    "tool_registry_sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7",
+    "environment_version": "finflow-local-design-0.1.0",
+    "reward_version": "binary-private-verifier-0.1.0",
+    "code_revision": null,
+    "policy_checkpoint": null,
+    "tokenizer": null,
+    "chat_template_sha256": null,
+    "sampling": {
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 0
+    },
+    "training_capture": null
+  },
+  "events": [
+    {
+      "step": 1,
+      "action": {
+        "call_id": "call-01",
+        "tool": "inspect_state",
+        "arguments": {
+          "scope_id": "scope-f145"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-01",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "scope_id": "scope-f145",
+          "tasks": [],
+          "artifacts": [],
+          "candidates": [
+            {
+              "candidate_id": "cand-b17",
+              "source_id": "src-d23",
+              "status": "pending_review"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "candidate:cand-b17"
+        ],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 2,
+      "action": {
+        "call_id": "call-02",
+        "tool": "inspect_policy",
+        "arguments": {
+          "source_id": "src-d23"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-02",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "source_id": "src-d23",
+          "training_approval": "pending",
+          "applicable_constraints": [
+            "training_requires_human_approval"
+          ]
+        },
+        "evidence_refs": [
+          "policy:src-d23"
+        ],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 3,
+      "action": {
+        "call_id": "call-03",
+        "tool": "record_escalation",
+        "arguments": {
+          "subject_id": "cand-b17",
+          "reason_code": "source_training_unapproved",
+          "evidence_refs": [
+            "obs-01",
+            "obs-02"
+          ],
+          "request_key": "escalate-01",
+          "expected_state_version": 0
+        }
+      },
+      "observation": {
+        "observation_id": "obs-03",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "escalation_id": "escalation-65",
+          "subject_id": "cand-b17",
+          "reason_code": "source_training_unapproved"
+        },
+        "evidence_refs": [
+          "escalation:65"
+        ],
+        "state_version": 1,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 4,
+      "action": {
+        "call_id": "call-04",
+        "tool": "submit_resolution",
+        "arguments": {
+          "disposition": "escalated",
+          "subject_ids": [
+            "cand-b17"
+          ],
+          "evidence_refs": [
+            "obs-01",
+            "obs-02",
+            "obs-03"
+          ],
+          "summary": "来源训练准入待人工批准，已记录转交；保留候选及授权状态。"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-04",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "accepted": true,
+          "submission_id": "submission-d"
+        },
+        "evidence_refs": [],
+        "state_version": 1,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ],
+  "result": {
+    "termination": "submitted",
+    "verifier_status": "not_executed",
+    "task_success": null,
+    "reward": null,
+    "train_eligible": false
+  }
+}

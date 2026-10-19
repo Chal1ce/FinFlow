@@ -1,0 +1,29 @@
+{
+  "schema_version": "0.1.0",
+  "task_id": "t-9b47",
+  "track": "operations",
+  "instruction": "检查此批次数据是否满足工件完整性要求。若存在可安全恢复的问题，请在允许范围内处理并复验；若需要人工决定，记录依据后转交。保留源文件、来源策略与已发布数据。",
+  "context": {
+    "scope_id": "scope-c472"
+  },
+  "allowed_tools": [
+    "inspect_state",
+    "inspect_task",
+    "trace_lineage",
+    "verify_artifacts",
+    "inspect_policy",
+    "list_recovery_sources",
+    "retry_task",
+    "run_pending",
+    "restore_artifact",
+    "record_escalation",
+    "submit_resolution"
+  ],
+  "budgets": {
+    "max_actions": 12,
+    "max_context_tokens": 12288,
+    "max_output_tokens_per_turn": 1024,
+    "max_total_output_tokens": 4096
+  },
+  "output_contract": "operations-resolution-v0.1"
+}

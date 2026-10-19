@@ -1,0 +1,316 @@
+{
+  "schema_version": "0.1.0",
+  "record_kind": "design_example",
+  "episode_id": "design-research-001",
+  "task_id": "t-6c21",
+  "track": "research",
+  "binding": {
+    "case_sha256": "187cc3a1191f822ae0353e1440bafd97325d8dab64c83ff0cb6d636274af89ec",
+    "tool_registry_sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7",
+    "environment_version": "finflow-local-design-0.1.0",
+    "reward_version": "binary-private-verifier-0.1.0",
+    "code_revision": null,
+    "policy_checkpoint": null,
+    "tokenizer": null,
+    "chat_template_sha256": null,
+    "sampling": {
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 0
+    },
+    "training_capture": null
+  },
+  "events": [
+    {
+      "step": 1,
+      "action": {
+        "call_id": "call-01",
+        "tool": "search_documents",
+        "arguments": {
+          "query": "示例企业 A 2024 合并 营业收入 经营活动现金流量净额"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-01",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "matches": [
+            {
+              "document_id": "doc-c31",
+              "table_id": "table-a12",
+              "entity_id": "entity-a01",
+              "scope": "consolidated",
+              "report_period": "2024",
+              "entity_name": "示例企业 A"
+            },
+            {
+              "document_id": "doc-c31",
+              "table_id": "table-b07",
+              "entity_id": "entity-a01",
+              "scope": "parent_company",
+              "report_period": "2024",
+              "entity_name": "示例企业 A"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "doc-c31"
+        ],
+        "state_version": null,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 2,
+      "action": {
+        "call_id": "call-02",
+        "tool": "read_table",
+        "arguments": {
+          "table_id": "table-a12"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-02",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "document_id": "doc-c31",
+          "entity_id": "entity-a01",
+          "report_period": "2024",
+          "currency": "CNY",
+          "scale": "million",
+          "table_id": "table-a12",
+          "title": "营业收入与经营活动现金流量净额",
+          "scope": "consolidated",
+          "page": 12,
+          "cells": [
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+              "row": "营业收入",
+              "period": "2023",
+              "value": "1000",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+              "row": "经营活动现金流量净额",
+              "period": "2023",
+              "value": "120",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+              "row": "营业收入",
+              "period": "2024",
+              "value": "1100",
+              "unit": "CNY_million"
+            },
+            {
+              "cell_id": "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3",
+              "row": "经营活动现金流量净额",
+              "period": "2024",
+              "value": "154",
+              "unit": "CNY_million"
+            }
+          ],
+          "entity_name": "示例企业 A",
+          "report_title": "示例企业 A 2024 年度合成报告"
+        },
+        "evidence_refs": [
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3"
+        ],
+        "state_version": null,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 3,
+      "action": {
+        "call_id": "call-03",
+        "tool": "calculate",
+        "arguments": {
+          "operation": "percentage",
+          "operands": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0"
+          ]
+        }
+      },
+      "observation": {
+        "observation_id": "obs-03",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "calculation_id": "calc-a",
+          "operation": "percentage",
+          "operands": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0"
+          ],
+          "value": "12",
+          "unit": "percent",
+          "evidence_refs": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0"
+          ]
+        },
+        "evidence_refs": [
+          "calc-a",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0"
+        ],
+        "state_version": null,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 4,
+      "action": {
+        "call_id": "call-04",
+        "tool": "calculate",
+        "arguments": {
+          "operation": "percentage",
+          "operands": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2"
+          ]
+        }
+      },
+      "observation": {
+        "observation_id": "obs-04",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "calculation_id": "calc-b",
+          "operation": "percentage",
+          "operands": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2"
+          ],
+          "value": "14",
+          "unit": "percent",
+          "evidence_refs": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2"
+          ]
+        },
+        "evidence_refs": [
+          "calc-b",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2"
+        ],
+        "state_version": null,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 5,
+      "action": {
+        "call_id": "call-05",
+        "tool": "calculate",
+        "arguments": {
+          "operation": "pp_difference",
+          "operands": [
+            "calc-b",
+            "calc-a"
+          ]
+        }
+      },
+      "observation": {
+        "observation_id": "obs-05",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "calculation_id": "calc-c",
+          "operation": "pp_difference",
+          "operands": [
+            "calc-b",
+            "calc-a"
+          ],
+          "value": "2",
+          "unit": "percentage_point",
+          "evidence_refs": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3"
+          ]
+        },
+        "evidence_refs": [
+          "calc-c",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+          "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3"
+        ],
+        "state_version": null,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 6,
+      "action": {
+        "call_id": "call-06",
+        "tool": "submit_answer",
+        "arguments": {
+          "answer_status": "answered",
+          "results": [
+            {
+              "metric_id": "operating_cash_flow_share_change",
+              "value": "2.00",
+              "unit": "percentage_point",
+              "entity_id": "entity-a01",
+              "scope": "consolidated",
+              "periods": [
+                "2023",
+                "2024"
+              ]
+            }
+          ],
+          "evidence_refs": [
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:0",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:1",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:2",
+            "cell:e1314c8e3a00d91812c0fda160b6fa5d9a031112777af524e88630a78cb3ee0c:3"
+          ],
+          "explanation": "合并口径：2023 年 120/1000=12%，2024 年 154/1100=14%，增加 2.00 个百分点。"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-06",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "accepted": true,
+          "submission_id": "submission-a"
+        },
+        "evidence_refs": [],
+        "state_version": null,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ],
+  "result": {
+    "termination": "submitted",
+    "verifier_status": "not_executed",
+    "task_success": null,
+    "reward": null,
+    "train_eligible": false
+  }
+}

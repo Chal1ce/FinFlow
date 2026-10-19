@@ -1,0 +1,4 @@
+ms-swift>=4.3.1,<5
+transformers>=5.9,<6
+qwen-vl-utils>=0.0.14
+peft

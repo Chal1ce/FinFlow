@@ -1,0 +1,29 @@
+{
+  "schema_version": "0.1.0",
+  "task_id": "t-1ea8",
+  "track": "operations",
+  "instruction": "核对该批次任务和工件状态，判断是否需要处理；提交有依据的结论。任何恢复操作均应遵循来源与完整性约束。",
+  "context": {
+    "scope_id": "scope-e329"
+  },
+  "allowed_tools": [
+    "inspect_state",
+    "inspect_task",
+    "trace_lineage",
+    "verify_artifacts",
+    "inspect_policy",
+    "list_recovery_sources",
+    "retry_task",
+    "run_pending",
+    "restore_artifact",
+    "record_escalation",
+    "submit_resolution"
+  ],
+  "budgets": {
+    "max_actions": 12,
+    "max_context_tokens": 12288,
+    "max_output_tokens_per_turn": 1024,
+    "max_total_output_tokens": 4096
+  },
+  "output_contract": "operations-resolution-v0.1"
+}

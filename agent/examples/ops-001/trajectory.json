@@ -1,0 +1,237 @@
+{
+  "schema_version": "0.1.0",
+  "record_kind": "design_example",
+  "episode_id": "design-ops-001",
+  "task_id": "t-9b47",
+  "track": "operations",
+  "binding": {
+    "case_sha256": "1c29acdef06eb0c116cb17edcabe78060d5098ff5f08e8d3bee949b0b8b63877",
+    "tool_registry_sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7",
+    "environment_version": "finflow-local-design-0.1.0",
+    "reward_version": "binary-private-verifier-0.1.0",
+    "code_revision": null,
+    "policy_checkpoint": null,
+    "tokenizer": null,
+    "chat_template_sha256": null,
+    "sampling": {
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 0
+    },
+    "training_capture": null
+  },
+  "events": [
+    {
+      "step": 1,
+      "action": {
+        "call_id": "call-01",
+        "tool": "inspect_state",
+        "arguments": {
+          "scope_id": "scope-c472"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-01",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "scope_id": "scope-c472",
+          "tasks": [
+            {
+              "task_id": "proc-c81",
+              "stage": "normalize",
+              "status": "completed",
+              "artifact_id": "art-derived"
+            }
+          ],
+          "candidates": [],
+          "artifacts": [
+            {
+              "artifact_id": "art-raw",
+              "role": "source"
+            },
+            {
+              "artifact_id": "art-derived",
+              "role": "derived"
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 2,
+      "action": {
+        "call_id": "call-02",
+        "tool": "verify_artifacts",
+        "arguments": {
+          "artifact_ids": [
+            "art-derived"
+          ]
+        }
+      },
+      "observation": {
+        "observation_id": "obs-02",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "checks": [
+            {
+              "artifact_id": "art-derived",
+              "exists": false,
+              "actual_sha256": null,
+              "expected_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+              "checksum_match": false
+            }
+          ]
+        },
+        "evidence_refs": [
+          "integrity:art-derived:missing"
+        ],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 3,
+      "action": {
+        "call_id": "call-03",
+        "tool": "list_recovery_sources",
+        "arguments": {
+          "artifact_id": "art-derived"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-03",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "artifact_id": "art-derived",
+          "sources": [
+            {
+              "recovery_source_id": "recovery-81d",
+              "sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+              "trusted": true
+            }
+          ]
+        },
+        "evidence_refs": [
+          "recovery:recovery-81d"
+        ],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 4,
+      "action": {
+        "call_id": "call-04",
+        "tool": "restore_artifact",
+        "arguments": {
+          "artifact_id": "art-derived",
+          "recovery_source_id": "recovery-81d",
+          "request_key": "restore-01",
+          "expected_state_version": 0
+        }
+      },
+      "observation": {
+        "observation_id": "obs-04",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "artifact_id": "art-derived",
+          "operation_id": "operation-41",
+          "status": "completed"
+        },
+        "evidence_refs": [],
+        "state_version": 1,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 5,
+      "action": {
+        "call_id": "call-05",
+        "tool": "verify_artifacts",
+        "arguments": {
+          "artifact_ids": [
+            "art-derived"
+          ]
+        }
+      },
+      "observation": {
+        "observation_id": "obs-05",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "checks": [
+            {
+              "artifact_id": "art-derived",
+              "exists": true,
+              "actual_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+              "expected_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+              "checksum_match": true
+            }
+          ]
+        },
+        "evidence_refs": [
+          "integrity:art-derived:match"
+        ],
+        "state_version": 1,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 6,
+      "action": {
+        "call_id": "call-06",
+        "tool": "submit_resolution",
+        "arguments": {
+          "disposition": "repaired",
+          "subject_ids": [
+            "art-derived"
+          ],
+          "evidence_refs": [
+            "obs-02",
+            "obs-03",
+            "obs-05"
+          ],
+          "summary": "派生工件缺失，已使用登记hash一致的可信副本恢复；复验匹配。"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-06",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "accepted": true,
+          "submission_id": "submission-b"
+        },
+        "evidence_refs": [],
+        "state_version": 1,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ],
+  "result": {
+    "termination": "submitted",
+    "verifier_status": "not_executed",
+    "task_success": null,
+    "reward": null,
+    "train_eligible": false
+  }
+}

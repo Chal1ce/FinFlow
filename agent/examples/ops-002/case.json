@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "case_id": "case-ops-002",
+  "task_id": "t-1ea8",
+  "track": "operations",
+  "synthetic": true,
+  "split": "design_demo",
+  "grouping": {
+    "source_group": "synthetic-source-a11",
+    "base_snapshot_group": "synthetic-pipeline-c47",
+    "template_family": "artifact-health",
+    "variant_family": "synthetic-c47-healthy-control"
+  },
+  "versions": {
+    "environment": "finflow-local-design-0.1.0",
+    "reward": "binary-private-verifier-0.1.0",
+    "fingerprint": "semantic-state-design-0.1.0",
+    "dataset": "synthetic-design-0.1.0"
+  },
+  "files": {
+    "task": {
+      "path": "examples/ops-002/task.json",
+      "sha256": "790d77383a6f546c7cb38f882dfd916e67c0144e8aa20d4de29cb0cf81e8c175"
+    },
+    "fixture": {
+      "path": "examples/ops-002/fixture.json",
+      "sha256": "69c2e33208dbb1975293665f7e074edfcc441d70056b94b32ad6e0a9f4057536"
+    },
+    "oracle": {
+      "path": "examples/ops-002/oracle.json",
+      "sha256": "15da0a3d48b75f8b4d1d503d5c77d759eef104c8cb633b79917f90ebe84ded87"
+    },
+    "tool_registry": {
+      "path": "tools.json",
+      "sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7"
+    }
+  }
+}

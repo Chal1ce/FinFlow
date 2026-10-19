@@ -1,0 +1,68 @@
+{
+  "schema_version": "0.1.0",
+  "synthetic": true,
+  "scope_id": "scope-c472",
+  "track": "operations",
+  "initial_state_version": 0,
+  "documents": [],
+  "files": [
+    {
+      "artifact_id": "art-raw",
+      "path": "files/source.txt",
+      "role": "source",
+      "expected_sha256": "623b33da111fbc174ea0ff051296a8bef4292231c57cbb17853138673a66341a",
+      "initial_content_utf8": "Synthetic source statement for governance design.\n",
+      "protected": true,
+      "published": false,
+      "restore_allowed": false
+    },
+    {
+      "artifact_id": "art-derived",
+      "path": "files/normalized.txt",
+      "role": "derived",
+      "expected_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+      "initial_content_utf8": null,
+      "protected": false,
+      "published": false,
+      "restore_allowed": true
+    }
+  ],
+  "recovery_sources": [
+    {
+      "recovery_source_id": "recovery-81d",
+      "artifact_id": "art-derived",
+      "content_utf8": "Synthetic normalized statement, schema v1.\n",
+      "sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+      "trusted": true
+    }
+  ],
+  "database": {
+    "tasks": [
+      {
+        "task_id": "proc-c81",
+        "stage": "normalize",
+        "status": "completed",
+        "artifact_id": "art-derived"
+      }
+    ],
+    "sources": [
+      {
+        "source_id": "src-a11",
+        "training_approval": "approved"
+      }
+    ],
+    "candidates": [],
+    "escalations": []
+  },
+  "protected_subjects": [
+    "art-raw",
+    "source:src-a11"
+  ],
+  "lineage_edges": [
+    {
+      "parent_artifact_id": "art-raw",
+      "child_artifact_id": "art-derived",
+      "relation": "normalized_from"
+    }
+  ]
+}

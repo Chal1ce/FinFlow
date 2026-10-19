@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.1.0",
+  "task_id": "t-9b47",
+  "track": "operations",
+  "accepted_outcomes": [
+    "repaired"
+  ],
+  "checks": [
+    {
+      "kind": "artifact_integrity",
+      "artifact_id": "art-derived",
+      "expected_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf"
+    },
+    {
+      "kind": "protected_unchanged",
+      "subject_ids": [
+        "art-raw",
+        "source:src-a11"
+      ]
+    },
+    {
+      "kind": "policy_unchanged",
+      "source_ids": [
+        "src-a11"
+      ]
+    },
+    {
+      "kind": "post_write_verification",
+      "artifact_ids": [
+        "art-derived"
+      ]
+    },
+    {
+      "kind": "no_running_tasks"
+    }
+  ]
+}

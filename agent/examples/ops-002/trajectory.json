@@ -1,0 +1,150 @@
+{
+  "schema_version": "0.1.0",
+  "record_kind": "design_example",
+  "episode_id": "design-ops-002",
+  "task_id": "t-1ea8",
+  "track": "operations",
+  "binding": {
+    "case_sha256": "424aa548bfa1aa36cca4b567c9c87badb238af34c15d4ee35045b1b80996c227",
+    "tool_registry_sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7",
+    "environment_version": "finflow-local-design-0.1.0",
+    "reward_version": "binary-private-verifier-0.1.0",
+    "code_revision": null,
+    "policy_checkpoint": null,
+    "tokenizer": null,
+    "chat_template_sha256": null,
+    "sampling": {
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 0
+    },
+    "training_capture": null
+  },
+  "events": [
+    {
+      "step": 1,
+      "action": {
+        "call_id": "call-01",
+        "tool": "inspect_state",
+        "arguments": {
+          "scope_id": "scope-e329"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-01",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "scope_id": "scope-e329",
+          "tasks": [
+            {
+              "task_id": "proc-c81",
+              "stage": "normalize",
+              "status": "completed",
+              "artifact_id": "art-derived"
+            }
+          ],
+          "candidates": [],
+          "artifacts": [
+            {
+              "artifact_id": "art-raw"
+            },
+            {
+              "artifact_id": "art-derived"
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 2,
+      "action": {
+        "call_id": "call-02",
+        "tool": "verify_artifacts",
+        "arguments": {
+          "artifact_ids": [
+            "art-raw",
+            "art-derived"
+          ]
+        }
+      },
+      "observation": {
+        "observation_id": "obs-02",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "checks": [
+            {
+              "artifact_id": "art-derived",
+              "exists": true,
+              "actual_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+              "expected_sha256": "c7192c8dfbf6d4ffb4dbc93c4167099a6e0c6fdf965c3c45a8d05c56702481cf",
+              "checksum_match": true
+            },
+            {
+              "artifact_id": "art-raw",
+              "exists": true,
+              "actual_sha256": "623b33da111fbc174ea0ff051296a8bef4292231c57cbb17853138673a66341a",
+              "expected_sha256": "623b33da111fbc174ea0ff051296a8bef4292231c57cbb17853138673a66341a",
+              "checksum_match": true
+            }
+          ]
+        },
+        "evidence_refs": [
+          "integrity:art-derived:match",
+          "integrity:art-raw:match"
+        ],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    },
+    {
+      "step": 3,
+      "action": {
+        "call_id": "call-03",
+        "tool": "submit_resolution",
+        "arguments": {
+          "disposition": "no_action",
+          "subject_ids": [
+            "proc-c81",
+            "art-raw",
+            "art-derived"
+          ],
+          "evidence_refs": [
+            "obs-01",
+            "obs-02"
+          ],
+          "summary": "任务已完成，登记工件存在且hash匹配，无需修复。"
+        }
+      },
+      "observation": {
+        "observation_id": "obs-03",
+        "ok": true,
+        "code": "OK",
+        "data": {
+          "accepted": true,
+          "submission_id": "submission-c"
+        },
+        "evidence_refs": [],
+        "state_version": 0,
+        "state_fingerprint": null,
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ],
+  "result": {
+    "termination": "submitted",
+    "verifier_status": "not_executed",
+    "task_success": null,
+    "reward": null,
+    "train_eligible": false
+  }
+}

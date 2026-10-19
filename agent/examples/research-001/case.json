@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "case_id": "case-research-001",
+  "task_id": "t-6c21",
+  "track": "research",
+  "synthetic": true,
+  "split": "design_demo",
+  "grouping": {
+    "source_group": "synthetic-entity-a01-work-b29",
+    "base_snapshot_group": "synthetic-report-a01",
+    "template_family": "cashflow-revenue-share-change",
+    "variant_family": "synthetic-report-a01-variants"
+  },
+  "versions": {
+    "environment": "finflow-local-design-0.1.0",
+    "reward": "binary-private-verifier-0.1.0",
+    "fingerprint": "semantic-state-design-0.1.0",
+    "dataset": "synthetic-design-0.1.0"
+  },
+  "files": {
+    "task": {
+      "path": "examples/research-001/task.json",
+      "sha256": "fa479388b0e30e324d1187c4de91b459bc7477f5c2427254549b8a249dc49009"
+    },
+    "fixture": {
+      "path": "examples/research-001/fixture.json",
+      "sha256": "a433559625f6ea0572a782b982856de73588bf6747aa7321331988f436415ba5"
+    },
+    "oracle": {
+      "path": "examples/research-001/oracle.json",
+      "sha256": "0a1a3887a47b911d7281ff6cf8a469356673075ba72e90b70053754a49c1b802"
+    },
+    "tool_registry": {
+      "path": "tools.json",
+      "sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7"
+    }
+  }
+}

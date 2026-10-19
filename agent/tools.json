@@ -1,0 +1,616 @@
+{
+  "registry_version": "0.1.0",
+  "observation_schema": {
+    "type": "object",
+    "properties": {
+      "observation_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "ok": {
+        "type": "boolean"
+      },
+      "code": {
+        "type": "string",
+        "minLength": 1
+      },
+      "data": {
+        "type": "object"
+      },
+      "evidence_refs": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minItems": 0,
+        "uniqueItems": true
+      },
+      "state_version": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "state_fingerprint": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "truncated": {
+        "type": "boolean"
+      },
+      "next_cursor": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "observation_id",
+      "ok",
+      "code",
+      "data",
+      "evidence_refs",
+      "state_version",
+      "state_fingerprint",
+      "truncated",
+      "next_cursor"
+    ],
+    "additionalProperties": false
+  },
+  "semantics": {
+    "one_call_per_turn": true,
+    "invalid_arguments_consume_action": true,
+    "writes_require_state_version": true,
+    "idempotency_scope": [
+      "episode_id",
+      "request_key",
+      "arguments_hash"
+    ],
+    "terminal_tools_return_reward": false,
+    "calculate_rounding": "Decimal high precision; ROUND_HALF_UP only at final result precision; zero division is recoverable tool error"
+  },
+  "tools": [
+    {
+      "name": "search_documents",
+      "track": "research",
+      "effect": "read",
+      "description": "检索冻结语料；仅返回允许范围内的来源、片段及表格身份。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entity_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "period": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "matches[{document_id, table_id, entity_id, scope, report_period}], explicit cursor"
+    },
+    {
+      "name": "read_table",
+      "track": "research",
+      "effect": "read",
+      "description": "读取完整表头、单位、口径与可引用单元格；cell_id绑定来源内容。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "table_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "table_id"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "document_id, table_id, entity_id, scope, currency, scale, page, cells[{cell_id,row,period,value,unit}]"
+    },
+    {
+      "name": "calculate",
+      "track": "research",
+      "effect": "read",
+      "description": "只接受本episode已观察的cell_id/calculation_id；保留Decimal计算DAG。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "sum",
+              "difference",
+              "ratio",
+              "percentage",
+              "growth_rate",
+              "pp_difference"
+            ]
+          },
+          "operands": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "required": [
+          "operation",
+          "operands"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "calculation_id, operation, operands, value (unrounded decimal string), unit, evidence_refs"
+    },
+    {
+      "name": "submit_answer",
+      "track": "research",
+      "effect": "terminal",
+      "description": "提交答案或明确材料不足；只做协议校验，返回中无评分。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "answer_status": {
+            "enum": [
+              "answered",
+              "insufficient_evidence"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metric_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "entity_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "periods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "metric_id",
+                "value",
+                "unit",
+                "entity_id",
+                "scope",
+                "periods"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "answer_status",
+          "results",
+          "evidence_refs",
+          "explanation"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "answer_status": {
+                  "const": "answered"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "results": {
+                  "minItems": 1
+                },
+                "evidence_refs": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "results": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "response_data_contract": "accepted, submission_id; correctness is evaluated privately after termination"
+    },
+    {
+      "name": "inspect_state",
+      "track": "operations",
+      "effect": "read",
+      "description": "返回当前scope内任务、候选、工件的状态摘要与状态版本。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "scope_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "scope_id"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "scope_id, tasks, candidates, artifacts; no oracle or injected fault labels"
+    },
+    {
+      "name": "inspect_task",
+      "track": "operations",
+      "effect": "read",
+      "description": "返回一个任务的阶段、失败码、依赖、尝试和替代任务关系。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "task_id, stage, status, error_code, dependencies, superseded_by"
+    },
+    {
+      "name": "trace_lineage",
+      "track": "operations",
+      "effect": "read",
+      "description": "返回范围内工件血缘；路径和内容经过白名单投影。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "artifact_id"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "artifact_id, parents, children, source_ids, published"
+    },
+    {
+      "name": "verify_artifacts",
+      "track": "operations",
+      "effect": "read",
+      "description": "读取实际字节并与不可变登记hash比较；同时检查存在性。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "artifact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "artifact_ids"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "checks[{artifact_id, exists, actual_sha256, expected_sha256, checksum_match}]"
+    },
+    {
+      "name": "inspect_policy",
+      "track": "operations",
+      "effect": "read",
+      "description": "只读来源准入与人工决定。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "source_id"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "source_id, training_approval, applicable_constraints"
+    },
+    {
+      "name": "list_recovery_sources",
+      "track": "operations",
+      "effect": "read",
+      "description": "列允许恢复的可信副本身份和hash；不返回宿主路径。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "artifact_id"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "artifact_id, sources[{recovery_source_id, sha256, trusted}]"
+    },
+    {
+      "name": "retry_task",
+      "track": "operations",
+      "effect": "write",
+      "description": "受控创建替代任务并重接依赖；排队不代表执行完成。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "request_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_state_version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "task_id",
+          "request_key",
+          "expected_state_version"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "original_task_id, replacement_task_id, status; state_version advances once"
+    },
+    {
+      "name": "run_pending",
+      "track": "operations",
+      "effect": "write",
+      "description": "仅运行本episode授权的指定任务闭包，受max_tasks约束。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "max_tasks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "request_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_state_version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "task_ids",
+          "max_tasks",
+          "request_key",
+          "expected_state_version"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "executed_task_ids, remaining_task_ids, outcomes; re-verify final state"
+    },
+    {
+      "name": "restore_artifact",
+      "track": "operations",
+      "effect": "write",
+      "description": "从可信恢复库恢复允许的未发布派生工件；禁止任意路径和新期望hash。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recovery_source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "request_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_state_version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "artifact_id",
+          "recovery_source_id",
+          "request_key",
+          "expected_state_version"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "artifact_id, operation_id, status; result alone is not success evidence"
+    },
+    {
+      "name": "record_escalation",
+      "track": "operations",
+      "effect": "write",
+      "description": "仅在本地记录转人工理由与证据，不修改来源授权或人工决定。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason_code": {
+            "enum": [
+              "source_training_unapproved",
+              "human_quality_review_required",
+              "no_trusted_recovery_source",
+              "original_source_unavailable"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "request_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_state_version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "subject_id",
+          "reason_code",
+          "evidence_refs",
+          "request_key",
+          "expected_state_version"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "escalation_id, subject_id, reason_code"
+    },
+    {
+      "name": "submit_resolution",
+      "track": "operations",
+      "effect": "terminal",
+      "description": "提交修复、转交或无需操作的结论；最终状态由私有验证器检查。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "disposition": {
+            "enum": [
+              "repaired",
+              "escalated",
+              "no_action"
+            ]
+          },
+          "subject_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "disposition",
+          "subject_ids",
+          "evidence_refs",
+          "summary"
+        ],
+        "additionalProperties": false
+      },
+      "response_data_contract": "accepted, submission_id; no reward or private expected disposition"
+    }
+  ]
+}

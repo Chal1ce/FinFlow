@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "task_id": "t-6c21",
+  "track": "research",
+  "instruction": "根据合成公司示例企业 A 的 2024 年报告，计算合并口径下经营活动现金流量净额占营业收入的比例，从 2023 年到 2024 年变化了多少个百分点。结果保留两位小数，说明口径并提供支持单元格。",
+  "context": {
+    "scope_id": "scope-a173"
+  },
+  "allowed_tools": [
+    "search_documents",
+    "read_table",
+    "calculate",
+    "submit_answer"
+  ],
+  "budgets": {
+    "max_actions": 8,
+    "max_context_tokens": 12288,
+    "max_output_tokens_per_turn": 1024,
+    "max_total_output_tokens": 4096
+  },
+  "output_contract": "research-answer-v0.1"
+}

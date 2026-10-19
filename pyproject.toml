@@ -33,7 +33,10 @@ dev = [
 py-modules = ["config"]
 
 [tool.setuptools.packages.find]
-include = ["core*", "delivery*", "ingestion*", "integrations*", "processing*", "qc*", "remote*", "spiders*", "storage*", "training*", "workflow*"]
+include = ["agent*", "core*", "delivery*", "ingestion*", "integrations*", "processing*", "qc*", "remote*", "spiders*", "storage*", "training*", "workflow*"]
+
+[tool.setuptools.package-data]
+agent = ["schemas/*.json", "tools.json", "trainers/sft/*.json", "trainers/sft/requirements.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

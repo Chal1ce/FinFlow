@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "case_id": "case-ops-003",
+  "task_id": "t-5f03",
+  "track": "operations",
+  "synthetic": true,
+  "split": "design_demo",
+  "grouping": {
+    "source_group": "synthetic-source-d23",
+    "base_snapshot_group": "synthetic-policy-f14",
+    "template_family": "training-delivery-diagnosis",
+    "variant_family": "synthetic-f14-policy-variants"
+  },
+  "versions": {
+    "environment": "finflow-local-design-0.1.0",
+    "reward": "binary-private-verifier-0.1.0",
+    "fingerprint": "semantic-state-design-0.1.0",
+    "dataset": "synthetic-design-0.1.0"
+  },
+  "files": {
+    "task": {
+      "path": "examples/ops-003/task.json",
+      "sha256": "e020143262bfbf0531afb240f95dc5cf84316fbdbdf74d3cdb6d40eb873f43b4"
+    },
+    "fixture": {
+      "path": "examples/ops-003/fixture.json",
+      "sha256": "199004e1f3d17684f853ca2cba2176dc042ba1412def7938c6ebb81e463c724c"
+    },
+    "oracle": {
+      "path": "examples/ops-003/oracle.json",
+      "sha256": "136beea0e3097ca1897736db5ac6362be3e2ba3cc66899d84119afc84dcada1d"
+    },
+    "tool_registry": {
+      "path": "tools.json",
+      "sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.1.0",
+  "case_id": "case-ops-001",
+  "task_id": "t-9b47",
+  "track": "operations",
+  "synthetic": true,
+  "split": "design_demo",
+  "grouping": {
+    "source_group": "synthetic-source-a11",
+    "base_snapshot_group": "synthetic-pipeline-c47",
+    "template_family": "artifact-health",
+    "variant_family": "synthetic-c47-missing-corrupt-recovery"
+  },
+  "versions": {
+    "environment": "finflow-local-design-0.1.0",
+    "reward": "binary-private-verifier-0.1.0",
+    "fingerprint": "semantic-state-design-0.1.0",
+    "dataset": "synthetic-design-0.1.0"
+  },
+  "files": {
+    "task": {
+      "path": "examples/ops-001/task.json",
+      "sha256": "b066514b4be0c880d6ae4709848e45e8f1b22f34479f2795b5ee10c11c19abac"
+    },
+    "fixture": {
+      "path": "examples/ops-001/fixture.json",
+      "sha256": "e3939b77291f697ba0dc050d826bab1505c23f5c54e4115825fe4749efa3103c"
+    },
+    "oracle": {
+      "path": "examples/ops-001/oracle.json",
+      "sha256": "34ffe0475766b479a074623170e69b8f50a55d5a4f788bbe05892eebd68c935b"
+    },
+    "tool_registry": {
+      "path": "tools.json",
+      "sha256": "b46164f3ad9add035a514ae32d34e3a2ce17bee61e4f23ce6df9b9d2cd149fa7"
+    }
+  }
+}

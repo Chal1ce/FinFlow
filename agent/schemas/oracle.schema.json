@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finflow:agentic:oracle:0.1.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "track": {
+      "enum": [
+        "research",
+        "operations"
+      ]
+    },
+    "accepted_outcomes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "answered",
+          "insufficient_evidence",
+          "repaired",
+          "escalated",
+          "no_action"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "research_result"
+              },
+              "metric_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_value": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "entity_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1
+              },
+              "periods": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              },
+              "decimal_places": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 12
+              },
+              "evidence_alternatives": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "minItems": 1
+              },
+              "reference_program": {
+                "$ref": "#/$defs/program"
+              }
+            },
+            "required": [
+              "kind",
+              "metric_id",
+              "expected_value",
+              "unit",
+              "entity_id",
+              "scope",
+              "periods",
+              "decimal_places",
+              "evidence_alternatives",
+              "reference_program"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "artifact_integrity"
+              },
+              "artifact_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "kind",
+              "artifact_id",
+              "expected_sha256"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "protected_unchanged"
+              },
+              "subject_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "kind",
+              "subject_ids"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "policy_unchanged"
+              },
+              "source_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "kind",
+              "source_ids"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "no_pipeline_mutations"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "no_running_tasks"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "escalation_exists"
+              },
+              "subject_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "subject_id",
+              "reason_code"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "task_successor_completed"
+              },
+              "original_task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "require_dependency_rewire": {
+                "const": true
+              }
+            },
+            "required": [
+              "kind",
+              "original_task_id",
+              "require_dependency_rewire"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "evidence_observed"
+              },
+              "all_submitted_refs": {
+                "const": true
+              }
+            },
+            "required": [
+              "kind",
+              "all_submitted_refs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "post_write_verification"
+              },
+              "artifact_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "kind",
+              "artifact_ids"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "insufficient_evidence"
+              },
+              "missing_requirements": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "kind",
+              "missing_requirements"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "track",
+    "accepted_outcomes",
+    "checks"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "program": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "cell_ref": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "cell_ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "enum": [
+                "sum",
+                "difference",
+                "ratio",
+                "percentage",
+                "growth_rate",
+                "pp_difference"
+              ]
+            },
+            "operands": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/program"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "operation",
+            "operands"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "track": {
+            "const": "research"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "accepted_outcomes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "answered",
+                "insufficient_evidence"
+              ]
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "track": {
+            "const": "operations"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "accepted_outcomes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "repaired",
+                "escalated",
+                "no_action"
+              ]
+            },
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

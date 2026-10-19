@@ -1,0 +1,370 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finflow:agentic:fixture:0.1.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "synthetic": {
+      "const": true
+    },
+    "scope_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "track": {
+      "enum": [
+        "research",
+        "operations"
+      ]
+    },
+    "initial_state_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "work_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entity_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "report_period": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "table_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "page": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "cells": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "cell_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "row": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "period": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": "string",
+                        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+                      },
+                      "unit": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "cell_id",
+                      "row",
+                      "period",
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "table_id",
+                "title",
+                "scope",
+                "page",
+                "cells"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "entity_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "report_title": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "document_id",
+          "work_id",
+          "entity_id",
+          "report_period",
+          "currency",
+          "scale",
+          "tables",
+          "entity_name",
+          "report_title"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+          },
+          "role": {
+            "enum": [
+              "source",
+              "derived"
+            ]
+          },
+          "expected_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "initial_content_utf8": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protected": {
+            "type": "boolean"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "restore_allowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "path",
+          "role",
+          "expected_sha256",
+          "initial_content_utf8",
+          "protected",
+          "published",
+          "restore_allowed"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "recovery_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "recovery_source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content_utf8": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "trusted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "recovery_source_id",
+          "artifact_id",
+          "content_utf8",
+          "sha256",
+          "trusted"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "minItems": 0
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "training_approval": {
+                "enum": [
+                  "approved",
+                  "pending",
+                  "denied"
+                ]
+              }
+            },
+            "required": [
+              "source_id",
+              "training_approval"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "candidate_id",
+              "source_id",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "escalations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "tasks",
+        "sources",
+        "candidates",
+        "escalations"
+      ],
+      "additionalProperties": false
+    },
+    "protected_subjects": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "lineage_edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "parent_artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "child_artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relation": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "parent_artifact_id",
+          "child_artifact_id",
+          "relation"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "synthetic",
+    "scope_id",
+    "track",
+    "initial_state_version",
+    "documents",
+    "files",
+    "recovery_sources",
+    "database",
+    "protected_subjects",
+    "lineage_edges"
+  ],
+  "additionalProperties": false,
+  "description": "V0.1 host-only normalized synthetic snapshot; a future builder maps it to isolated SQLite and files. Not a live database dump."
+}

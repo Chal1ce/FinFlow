@@ -1,0 +1,567 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finflow:agentic:trajectory:0.1.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "record_kind": {
+      "enum": [
+        "design_example",
+        "execution"
+      ]
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "track": {
+      "enum": [
+        "research",
+        "operations"
+      ]
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "case_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "tool_registry_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "environment_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reward_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_checkpoint": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tokenizer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chat_template_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sampling": {
+          "type": "object",
+          "properties": {
+            "temperature": {
+              "type": "number",
+              "minimum": 0
+            },
+            "top_p": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "temperature",
+            "top_p",
+            "seed"
+          ],
+          "additionalProperties": false
+        },
+        "training_capture": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "case_sha256",
+        "tool_registry_sha256",
+        "environment_version",
+        "reward_version",
+        "code_revision",
+        "policy_checkpoint",
+        "tokenizer",
+        "chat_template_sha256",
+        "sampling",
+        "training_capture"
+      ],
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "object",
+            "properties": {
+              "call_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tool": {
+                "type": "string",
+                "minLength": 1
+              },
+              "arguments": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "call_id",
+              "tool",
+              "arguments"
+            ],
+            "additionalProperties": false
+          },
+          "observation": {
+            "type": "object",
+            "properties": {
+              "observation_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "data": {
+                "type": "object"
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              },
+              "state_version": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state_fingerprint": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "observation_id",
+              "ok",
+              "code",
+              "data",
+              "evidence_refs",
+              "state_version",
+              "state_fingerprint",
+              "truncated",
+              "next_cursor"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "step",
+          "action",
+          "observation"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "termination": {
+          "enum": [
+            "submitted",
+            "step_limit",
+            "generation_limit",
+            "forbidden_action",
+            "infrastructure_failure"
+          ]
+        },
+        "verifier_status": {
+          "enum": [
+            "not_executed",
+            "passed",
+            "failed",
+            "invalid"
+          ]
+        },
+        "task_success": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reward": {
+          "enum": [
+            null,
+            -1,
+            0,
+            1
+          ]
+        },
+        "train_eligible": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "termination",
+        "verifier_status",
+        "task_success",
+        "reward",
+        "train_eligible"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "record_kind",
+    "episode_id",
+    "task_id",
+    "track",
+    "binding",
+    "events",
+    "result"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "record_kind": {
+            "const": "design_example"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "verifier_status": {
+                "const": "not_executed"
+              },
+              "task_success": {
+                "const": null
+              },
+              "reward": {
+                "const": null
+              },
+              "train_eligible": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {
+              "train_eligible": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "record_kind": {
+            "const": "execution"
+          },
+          "binding": {
+            "properties": {
+              "code_revision": {
+                "type": "string",
+                "minLength": 1
+              },
+              "policy_checkpoint": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tokenizer": {
+                "type": "string",
+                "minLength": 1
+              },
+              "chat_template_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "training_capture": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha256"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "result": {
+            "properties": {
+              "verifier_status": {
+                "enum": [
+                  "passed",
+                  "failed"
+                ]
+              },
+              "task_success": {
+                "type": "boolean"
+              },
+              "reward": {
+                "enum": [
+                  -1,
+                  0,
+                  1
+                ]
+              },
+              "termination": {
+                "enum": [
+                  "submitted",
+                  "step_limit",
+                  "generation_limit",
+                  "forbidden_action"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {
+              "termination": {
+                "const": "infrastructure_failure"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "train_eligible": {
+                "const": false
+              },
+              "reward": {
+                "const": null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {
+              "reward": {
+                "const": 1
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "verifier_status": {
+                "const": "passed"
+              },
+              "task_success": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {
+              "reward": {
+                "enum": [
+                  -1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "verifier_status": {
+                "const": "failed"
+              },
+              "task_success": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {
+              "termination": {
+                "const": "infrastructure_failure"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "verifier_status": {
+                "enum": [
+                  "not_executed",
+                  "invalid"
+                ]
+              },
+              "task_success": {
+                "const": null
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

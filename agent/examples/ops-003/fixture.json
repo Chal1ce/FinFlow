@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1.0",
+  "synthetic": true,
+  "scope_id": "scope-f145",
+  "track": "operations",
+  "initial_state_version": 0,
+  "documents": [],
+  "files": [],
+  "recovery_sources": [],
+  "database": {
+    "tasks": [],
+    "sources": [
+      {
+        "source_id": "src-d23",
+        "training_approval": "pending"
+      }
+    ],
+    "candidates": [
+      {
+        "candidate_id": "cand-b17",
+        "source_id": "src-d23",
+        "status": "pending_review"
+      }
+    ],
+    "escalations": []
+  },
+  "protected_subjects": [
+    "source:src-d23",
+    "candidate:cand-b17"
+  ],
+  "lineage_edges": []
+}
