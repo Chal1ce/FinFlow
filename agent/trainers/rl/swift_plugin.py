@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 from swift.callbacks import TrainerCallback, callbacks_map
 from swift.rollout.multi_turn import MultiTurnScheduler, multi_turns
@@ -42,15 +43,22 @@ class FinancialResearchScheduler(MultiTurnScheduler):
             row = request.data_dict["env_config"]
             case = ResearchCase.load(os.environ["FINFLOW_RL_DATASET"], row["case_path"])
             tokenizer = getattr(_trainer.processing_class, "tokenizer", _trainer.processing_class)
+            args = getattr(_trainer, "args", None)
+            manifest = os.environ.get("FINFLOW_RL_RUN_MANIFEST")
             episode = ResearchEpisode(
                 case,
                 logs=os.environ["FINFLOW_RL_EPISODES"],
-                run_manifest=os.environ["FINFLOW_RL_RUN_MANIFEST"],
+                run_manifest=manifest,
                 policy={
                     "optimizer_step": _trainer.state.global_step,
                     "phase": "train" if _trainer.model.training else "validation",
+                    "request_id": request.uuid,
+                    "attempt": Path(manifest).stem if manifest else None,
                     "tokenizer": getattr(tokenizer, "name_or_path", None),
                     "model_revision": getattr(_trainer.model.config, "_commit_hash", None),
+                    "temperature": getattr(args, "temperature", None),
+                    "top_p": getattr(args, "top_p", None),
+                    "max_turns": self.max_turns,
                 },
             )
             request.messages = episode.initial_messages()
@@ -66,6 +74,15 @@ class FinancialResearchScheduler(MultiTurnScheduler):
             if not sampled_ids or len(sampled_ids) != len(logprobs):
                 raise RuntimeError("rollout backend did not return aligned native token IDs and logprobs")
             ids, mask = self.get_response_token_data(infer_request, response_choice)
+            if len(ids) != len(mask):
+                raise RuntimeError("response token IDs and loss mask have different lengths")
+            if any(value not in (0, 1) for value in mask):
+                raise RuntimeError("response loss mask must contain only 0/1")
+            context = [
+                str(message.get("content") or "")
+                for message in infer_request.messages[:-1]
+                if message.get("role") != "assistant" or isinstance(message.get("content"), str)
+            ]
             episode.capture(
                 {
                     "turn": current_turn,
@@ -74,6 +91,10 @@ class FinancialResearchScheduler(MultiTurnScheduler):
                     "rollout_logprobs": logprobs,
                     "response_token_ids": ids,
                     "response_loss_mask": mask,
+                    "sampled_tokens": len(sampled_ids),
+                    "mask_tokens": sum(mask),
+                    "context_chars": sum(len(item) for item in context),
+                    "message_count": len(infer_request.messages),
                     "finish_reason": response_choice.finish_reason,
                 }
             )

@@ -29,16 +29,32 @@ def validate_oracle(episode):
                     raise ValueError("private evidence references an unknown cell")
 
 
-def verify(episode):
+def verify(episode, *, strict_evidence=False):
+    """Score one terminal episode.
+
+    Training uses ``strict_evidence=False`` so a correct answer with an extra observed
+    cell is not turned into a false negative. Frozen evaluation should pass
+    ``strict_evidence=True`` and report both any-support and exact-support rates.
+    """
     if episode.status == "infrastructure_failure":
-        return {"reward": None, "train_eligible": False, "reason": "infrastructure_failure"}
+        return {"reward": None, "train_eligible": False, "reason": "infrastructure_failure", "strict_support": False}
     if episode.status == "forbidden_action":
-        return {"reward": -1.0, "train_eligible": True, "reason": "forbidden_action"}
-    failure = {"reward": 0.0, "train_eligible": True}
+        return {"reward": -1.0, "train_eligible": True, "reason": "forbidden_action", "strict_support": False}
+    failure = {"reward": 0.0, "train_eligible": True, "strict_support": False}
     answer = episode.submission
     if episode.status != "submitted" or not answer:
         return {**failure, "reason": episode.status}
-    if answer["answer_status"] not in episode.case.oracle["accepted_outcomes"]:
+    accepted = episode.case.oracle["accepted_outcomes"]
+    if answer["answer_status"] == "insufficient_evidence":
+        if "insufficient_evidence" not in accepted or answer["results"]:
+            return {**failure, "reason": "outcome"}
+        return {
+            "reward": 1.0,
+            "train_eligible": True,
+            "reason": "insufficient_evidence",
+            "strict_support": True,
+        }
+    if answer["answer_status"] not in accepted:
         return {**failure, "reason": "outcome"}
     refs = answer["evidence_refs"]
     if not refs or any(ref not in episode.observed for ref in refs):
@@ -53,16 +69,27 @@ def verify(episode):
     possible_supports = {frozenset()}
     for check in checks:
         result = results[check["metric_id"]]
-        if any(result[key] != check[key] for key in ("unit", "entity_id", "scope", "periods")):
+        if any(result[key] != check[key] for key in ("unit", "entity_id", "scope")):
             return {**failure, "reason": "result_context"}
+        periods = result["periods"]
+        if len(set(periods)) != len(periods) or sorted(periods) != sorted(check["periods"]):
+            return {**failure, "reason": "result_periods"}
         value = Decimal(result["value"])
         expected = rounded(evaluate(check["reference_program"], episode.nodes), check["decimal_places"])
-        if value != expected or value.as_tuple().exponent != -check["decimal_places"]:
-            return {**failure, "reason": "numeric_result"}
+        if value != expected:
+            return {**failure, "reason": "numeric_value"}
+        if value.as_tuple().exponent != -check["decimal_places"]:
+            return {**failure, "reason": "numeric_format"}
         alternatives = [frozenset(item) for item in check["evidence_alternatives"] if set(item) <= expanded]
         if not alternatives:
-            return {**failure, "reason": "supporting_cells"}
+            return {**failure, "reason": "evidence_missing"}
         possible_supports = {support | alternative for support in possible_supports for alternative in alternatives}
-    if frozenset(expanded) not in possible_supports:
-        return {**failure, "reason": "supporting_cells"}
-    return {"reward": 1.0, "train_eligible": True, "reason": "all_checks_passed"}
+    strict = frozenset(expanded) in possible_supports
+    if strict_evidence and not strict:
+        return {**failure, "reason": "evidence_extra"}
+    return {
+        "reward": 1.0,
+        "train_eligible": True,
+        "reason": "all_checks_passed" if strict else "all_checks_passed_extra_evidence",
+        "strict_support": strict,
+    }

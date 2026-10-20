@@ -1,5 +1,5 @@
 {
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "observation_schema": {
     "type": "object",
     "properties": {
@@ -125,11 +125,15 @@
       "name": "read_table",
       "track": "research",
       "effect": "read",
-      "description": "读取完整表头、单位、口径与可引用单元格；cell_id绑定来源内容。",
+      "description": "读取表头、单位、口径与可引用单元格；可用 period 过滤单个年度，cell_id 绑定来源内容。",
       "input_schema": {
         "type": "object",
         "properties": {
           "table_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "period": {
             "type": "string",
             "minLength": 1
           }

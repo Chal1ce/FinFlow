@@ -47,10 +47,30 @@ def main(argv=None):
     rl_build.add_argument("--output", type=Path, required=True)
     rl_build.add_argument("--train-cases", type=int, default=128)
     rl_build.add_argument("--validation-cases", type=int, default=32)
+    rl_build.add_argument("--test-cases", type=int, default=0, help="frozen test cases; not used by training")
     rl_build.add_argument("--seed", type=int, default=42)
-    rl_sft = commands.add_parser("rl-sft", help="execute reference tools and export offline Agent SFT demonstrations")
+    rl_import = commands.add_parser("rl-import", help="build research tasks from already accepted SFT table transcriptions")
+    rl_import.add_argument("--dataset", type=Path, required=True, help="existing governed financial-sft-dataset-v2 directory")
+    rl_import.add_argument("--output", type=Path, required=True)
+    rl_start = commands.add_parser("rl-start", help="prepare a zero-checkpoint experiment; optionally run Agent SFT -> GRPO")
+    rl_start.add_argument("--output", type=Path, required=True)
+    source = rl_start.add_mutually_exclusive_group()
+    source.add_argument("--dataset", type=Path, help="existing executable research tasks; frozen into this experiment")
+    source.add_argument("--sft-dataset", type=Path, help="existing governed SFT snapshot with accepted table_structure samples")
+    rl_start.add_argument("--model", help="base model ID or local directory; defaults to Qwen/Qwen3.5-0.8B")
+    rl_start.add_argument("--sft-steps", type=int)
+    rl_start.add_argument("--rl-steps", type=int)
+    rl_start.add_argument("--train-cases", type=int, help="synthetic fallback only; default 128")
+    rl_start.add_argument("--validation-cases", type=int, help="synthetic fallback only; default 32")
+    rl_start.add_argument("--seed", type=int, help="synthetic fallback only; default 42")
+    rl_start.add_argument("--direct-rl", action="store_true", help="skip Agent SFT and initialize RL from the base model")
+    rl_start.add_argument("--train", action="store_true", help="start GPU training; without this flag only prepare local data")
+    rl_sft = commands.add_parser("rl-sft", help="export executed reference demonstrations or successful on-policy episodes")
     rl_sft.add_argument("--dataset", type=Path, required=True)
     rl_sft.add_argument("--output", type=Path, required=True)
+    rl_sft.add_argument("--variants", type=int, default=2, help="reference variants per case (1-4)")
+    rl_sft.add_argument("--from-episodes", type=Path, help="export successful train episodes from this run/episodes directory")
+    rl_sft.add_argument("--per-case", type=int, default=1, help="maximum successful episodes per case")
     rl = commands.add_parser("rl", help="train single-GPU multi-turn financial research GRPO")
     rl.add_argument("--dataset", type=Path, required=True)
     rl.add_argument("--output", type=Path, required=True)
@@ -60,14 +80,43 @@ def main(argv=None):
     rl.add_argument("--sft-adapter", type=Path, help="initialize a new RL run from an SFT LoRA adapter")
     rl.add_argument("--resume-from-checkpoint", type=Path)
     rl.add_argument("--prepare-only", action="store_true", help="serialize the command and frozen cases without starting training")
+    rl_eval = commands.add_parser("rl-eval", help="run a frozen split with reference, replay or local-model policy")
+    rl_eval.add_argument("--dataset", type=Path, required=True)
+    rl_eval.add_argument("--output", type=Path, required=True, help="new evaluation directory")
+    rl_eval.add_argument("--split", default="test", help="test (default), validation or train")
+    rl_eval.add_argument("--policy", choices=["reference", "replay", "model"], default="reference")
+    rl_eval.add_argument("--responses", type=Path, help="JSONL rows with case_id and actions for --policy replay")
+    rl_eval.add_argument("--model", help="base model for --policy model")
+    rl_eval.add_argument("--adapter", type=Path, help="optional SFT/RL LoRA adapter for --policy model")
+    rl_eval.add_argument("--samples", type=int, default=1, help="runs per case; use 4 for pass@4")
+    rl_eval.add_argument("--limit", type=int)
+    rl_eval.add_argument("--max-new-tokens", type=int, default=512)
+    rl_eval.add_argument("--temperature", type=float, default=0.9)
+    rl_eval.add_argument("--top-p", type=float, default=0.95)
+    rl_eval.add_argument("--allow-extra-evidence", action="store_true", help="accept any supporting evidence set instead of exact evidence")
     rl_report = commands.add_parser("rl-report", help="summarize saved episode outcomes and failure reasons")
     rl_report.add_argument("--run", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "rl-sft":
-            from agent.datasets.research_sft import export_research_sft
+        if args.command == "rl-start":
+            from agent.pipeline import start_research
 
-            result = export_research_sft(args.dataset, args.output)
+            result = start_research(**{key: value for key, value in vars(args).items() if key != "command"})
+            summary = {key: value for key, value in result.items() if key != "inputs"}
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            return 0 if result["status"] != "failed" else 1
+        if args.command == "rl-import":
+            from agent.datasets.governed import build_governed_dataset
+
+            print(json.dumps(build_governed_dataset(args.dataset, args.output), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "rl-sft":
+            from agent.datasets.research_sft import export_episode_sft, export_research_sft
+
+            if args.from_episodes:
+                result = export_episode_sft(args.dataset, args.from_episodes, args.output, per_case=args.per_case)
+            else:
+                result = export_research_sft(args.dataset, args.output, variants=args.variants)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
         if args.command == "rl-report":
@@ -75,11 +124,88 @@ def main(argv=None):
 
             print(json.dumps(summarize(args.run), ensure_ascii=False, indent=2))
             return 0
+        if args.command == "rl-eval":
+            from agent.datasets.files import load_cases
+            from agent.evaluation.policies import ReferencePolicy, ReplayPolicy
+            from agent.evaluation.runner import evaluate, load_replay
+
+            metadata = {}
+            if args.policy == "reference":
+                if args.adapter:
+                    raise ValueError("--adapter is only valid with --policy model")
+                factory = ReferencePolicy
+            elif args.policy == "replay":
+                if not args.responses or not args.responses.is_file():
+                    raise ValueError("--policy replay requires an existing --responses JSONL file")
+                actions = load_replay(args.responses)
+                missing = [
+                    case.manifest["case_id"]
+                    for split, _, case in load_cases(args.dataset)
+                    if split == args.split and case.manifest["case_id"] not in actions
+                ]
+                if missing:
+                    raise ValueError("replay file is missing cases: " + ", ".join(missing[:3]))
+
+                def factory(case):
+                    return ReplayPolicy(case, actions[case.manifest["case_id"]])
+            else:
+                if not args.model:
+                    raise ValueError("--policy model requires --model")
+                from agent.evaluation.model_policy import ModelPolicy
+
+                policy = ModelPolicy(
+                    args.model,
+                    adapter=str(args.adapter) if args.adapter else None,
+                    max_new_tokens=args.max_new_tokens,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                )
+
+                def factory(case):
+                    return policy
+
+                metadata = {
+                    "model": args.model,
+                    "adapter": str(args.adapter.resolve()) if args.adapter else None,
+                    "max_new_tokens": args.max_new_tokens,
+                    "temperature": args.temperature,
+                    "top_p": args.top_p,
+                }
+            result = evaluate(
+                args.dataset,
+                args.output,
+                policy_factory=factory,
+                policy_name=args.policy,
+                policy_metadata=metadata,
+                split=args.split,
+                samples=args.samples,
+                limit=args.limit,
+                strict_evidence=not args.allow_extra_evidence,
+            )
+            print(
+                json.dumps(
+                    {
+                        "status": "completed",
+                        "output": str(args.output.resolve()),
+                        "split": args.split,
+                        "policy": args.policy,
+                        "samples": args.samples,
+                        "summary": result["summary"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         if args.command == "rl-build":
             from agent.datasets.research import build_research_dataset
 
             result = build_research_dataset(
-                args.output, train_cases=args.train_cases, validation_cases=args.validation_cases, seed=args.seed
+                args.output,
+                train_cases=args.train_cases,
+                validation_cases=args.validation_cases,
+                test_cases=args.test_cases,
+                seed=args.seed,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
@@ -152,7 +278,7 @@ def main(argv=None):
             )
         )
         return 1 if manifest["status"] == "partial" else 0
-    except (ValueError, OSError, sqlite3.Error) as exc:
+    except (ValueError, OSError, sqlite3.Error, RuntimeError) as exc:
         message = str(exc) if isinstance(exc, ValueError) else "local agent data file operation failed"
         print(json.dumps({"status": "failed", "error_type": type(exc).__name__, "message": message}, ensure_ascii=False))
         return 2

@@ -30,4 +30,4 @@ python -m agent.cli sft \
 
 复跑使用新输出目录；继续已有训练时，保持模型/数据/配方一致并加 `--resume-from-checkpoint` 指向实际 checkpoint 目录。若只想生成输入和命令，可以使用 `--prepare-only` 和单独的输出目录。
 
-该入口完成普通文本/视觉 SFT。工具 episode、Agent SFT 轨迹构建及 Agentic RL 环境/奖励/训练适配继续开发。
+该入口完成普通文本/视觉 SFT，也可直接消费 `rl-sft` 导出的 Agent 工具轨迹（含多变体/拒绝采样数据）。RL 环境、奖励与多轮 GRPO 入口见 [RL 指南](../rl/README.md)；视觉环境与 operations 环境继续开发。

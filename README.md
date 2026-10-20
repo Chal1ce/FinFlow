@@ -103,7 +103,7 @@ python -m workflow.cli list
 | 手工处理财报、了解目录和交付内容 | [财报处理与交付](docs/financial-workflow.md) |
 | 调整清洗规则、切片与 LLM 治理 | [清洗与治理](docs/governance.md) |
 | 从 v7 证据生成文本或多模态 SFT | [文本 SFT](docs/sft.md) · [图表多模态 SFT](docs/sft-vision.md) |
-| 单卡训练金融工具 Agent：参考示范 SFT → 多轮 GRPO | [Agentic RL 运行指南](agent/trainers/rl/README.md) |
+| 金融工具 Agent：无 checkpoint 准备实验、治理表格任务、SFT → GRPO | [Agentic RL 运行指南](agent/trainers/rl/README.md) |
 | 扩展生成方法、调整数据比例或学习配比 | [方法库](docs/training-methods.md) · [数据配比](docs/data-mixtures.md) · [DoReMi / RegMix](docs/mixture-experiments.md) |
 | 从已有 v5/v6 发布包构建语料 | [已有发布包生成预训练语料](docs/pretraining.md) |
 | 部署或连接 OCR 服务 | [PaddleOCR 部署与连接](docs/paddleocr_remote.md) |

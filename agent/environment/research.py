@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 import uuid
 from copy import deepcopy
 from decimal import Decimal, DecimalException, localcontext
@@ -32,16 +33,82 @@ def arithmetic(operation, left, right):
     raise ValueError("unsupported calculation operation")
 
 
-def parse_action(text):
-    text = text.strip()
-    if text.startswith("```json\n") and text.endswith("```"):
-        text = text[8:-3].strip()
-    if text.startswith("<tool_call>") and text.endswith("</tool_call>"):
-        text = text[11:-12].strip()
-    value = json.loads(text)
-    if not isinstance(value, dict) or set(value) != {"name", "arguments"} or not isinstance(value["name"], str):
+_FENCE_START = re.compile(r"^```(?:json)?\s*", re.IGNORECASE)
+_FENCE_END = re.compile(r"\s*```$")
+
+
+def parse_action_with_repair(text):
+    """Parse one tool call, tolerating common small-model formatting noise.
+
+    The environment remains strict about semantics (one action, known fields, object
+    arguments). Repairs are returned so episodes can report how often the model needed
+    fence/alias/leading-text cleanup instead of silently treating that as a policy error.
+    """
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("empty action")
+    repairs = []
+    value = text.strip()
+    stripped = _FENCE_START.sub("", value, count=1)
+    if stripped != value:
+        repairs.append("fence")
+        value = stripped
+    if value.startswith("<tool_call>"):
+        value = value[11:]
+        repairs.append("tool_call_tag")
+    if value.endswith("</tool_call>"):
+        value = value[:-12]
+        repairs.append("tool_call_tag")
+    stripped = _FENCE_END.sub("", value)
+    if stripped != value:
+        repairs.append("fence_end")
+        value = stripped
+    value = value.strip()
+    start = value.find("{")
+    if start < 0:
         raise ValueError('emit one JSON object with exactly "name" and "arguments"')
-    return value
+    if start:
+        repairs.append("leading_text")
+    try:
+        parsed, end = json.JSONDecoder().raw_decode(value[start:])
+    except json.JSONDecodeError as exc:
+        raise ValueError('emit one JSON object with exactly "name" and "arguments"') from exc
+    if value[start + end :].strip():
+        raise ValueError("only one action per turn; remove trailing text")
+    if not isinstance(parsed, dict):
+        raise ValueError('emit one JSON object with exactly "name" and "arguments"')
+    if "name" not in parsed and isinstance(parsed.get("tool"), str):
+        parsed["name"] = parsed.pop("tool")
+        repairs.append("tool_alias")
+    if "arguments" not in parsed and "args" in parsed:
+        parsed["arguments"] = parsed.pop("args")
+        repairs.append("args_alias")
+    action_type = parsed.get("type")
+    if isinstance(action_type, str) and action_type in {"tool_call", "function"}:
+        parsed.pop("type")
+        repairs.append("type_field")
+    if isinstance(parsed.get("id"), str):
+        parsed.pop("id")
+        repairs.append("id_field")
+    if set(parsed) != {"name", "arguments"}:
+        raise ValueError('emit one JSON object with exactly "name" and "arguments"')
+    if not isinstance(parsed["name"], str) or not parsed["name"]:
+        raise ValueError("action name must be a non-empty string")
+    arguments = parsed["arguments"]
+    if isinstance(arguments, str):
+        try:
+            arguments = json.loads(arguments)
+        except json.JSONDecodeError as exc:
+            raise ValueError("arguments must be a JSON object") from exc
+        repairs.append("arguments_string")
+    if not isinstance(arguments, dict):
+        raise ValueError("arguments must be a JSON object")
+    parsed["arguments"] = arguments
+    return parsed, repairs
+
+
+def parse_action(text):
+    return parse_action_with_repair(text)[0]
+
 
 
 class ToolError(ValueError):
@@ -49,7 +116,7 @@ class ToolError(ValueError):
 
 
 class ResearchEpisode:
-    def __init__(self, case, *, logs=None, run_manifest=None, policy=None):
+    def __init__(self, case, *, logs=None, run_manifest=None, policy=None, strict_evidence=False):
         self.case = case
         self.episode_id = uuid.uuid4().hex
         self.status = "running"
@@ -65,6 +132,8 @@ class ResearchEpisode:
         self.logs = Path(logs) / self.episode_id if logs else None
         self.run_manifest = run_manifest
         self.policy = policy
+        self.strict_evidence = strict_evidence
+        self.known_tools = {tool["name"] for tool in case.registry["tools"]}
         self.tool_map = {tool["name"]: tool for tool in case.registry["tools"] if tool["name"] in case.task["allowed_tools"]}
         for document in case.fixture["documents"]:
             for table in document["tables"]:
@@ -156,13 +225,30 @@ class ResearchEpisode:
         self.status = status
         from agent.verifiers.research import verify
 
-        self.verdict = verify(self)
+        self.verdict = verify(self, strict_evidence=self.strict_evidence)
         self._persist()
 
+    def _node_view(self, ref):
+        node = self.nodes[ref]
+        view = {
+            "value": format(node["value"], "f"),
+            "unit": node["unit"],
+            "entity_id": node["entity_id"],
+            "scope": node["scope"],
+            "periods": list(node["periods"]),
+        }
+        if "operation" in node:
+            view["operation"] = node["operation"]
+            view["operands"] = list(node["operands"])
+            view["evidence_refs"] = list(node["evidence_refs"])
+        return view
+
     def _observation(self, ok, code, data=None, refs=()):
-        state = {
+        # The payload stays compact; the fingerprint covers the full observable state so
+        # two different histories cannot collide.
+        full_state = {
+            "observed": {ref: self._node_view(ref) for ref in sorted(self.observed)},
             "discovered": sorted(self.discovered),
-            "observed": {ref: {**self.nodes[ref], "value": format(self.nodes[ref]["value"], "f")} for ref in sorted(self.observed)},
             "actions": len(self.actions),
             "submission": self.submission,
         }
@@ -173,14 +259,26 @@ class ResearchEpisode:
             "data": data or {},
             "evidence_refs": list(refs),
             "state_version": None,
-            "state_fingerprint": hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest(),
+            "state_fingerprint": hashlib.sha256(json.dumps(full_state, sort_keys=True).encode()).hexdigest(),
             "truncated": bool(data and data.get("next_cursor")),
             "next_cursor": data.get("next_cursor") if data else None,
         }
 
+    def _record(self, raw, action, observation, repairs, started):
+        record = {
+            "raw": raw,
+            "action": action,
+            "observation": observation,
+            "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+        }
+        if repairs:
+            record["parse_repairs"] = list(repairs)
+        self.actions.append(record)
+
     def step(self, text, *, sampled_tokens=0, finish_reason=None):
         if self.done:
             raise ValueError("episode already terminated")
+        started = time.perf_counter()
         self.total_output_tokens += sampled_tokens
         budgets = self.case.task["budgets"]
         if (
@@ -189,26 +287,33 @@ class ResearchEpisode:
             or self.total_output_tokens > budgets["max_total_output_tokens"]
         ):
             observation = self._observation(False, "generation_limit")
-            self.actions.append({"raw": text, "observation": observation})
+            self._record(text, None, observation, [], started)
             self.finish("generation_limit")
             return observation
-        action = None
+        action, repairs = None, []
         try:
-            action = parse_action(text)
-            if action["name"] not in self.tool_map:
+            action, repairs = parse_action_with_repair(text)
+            if action["name"] not in self.known_tools:
+                observation = self._observation(
+                    False,
+                    "unknown_tool",
+                    {"message": "unknown tool name; choose one of " + ", ".join(sorted(self.tool_map))},
+                )
+            elif action["name"] not in self.tool_map:
                 observation = self._observation(False, "forbidden_action")
-                self.actions.append({"raw": text, "action": action, "observation": observation})
+                self._record(text, action, observation, repairs, started)
                 self.finish("forbidden_action")
                 return observation
-            validator = Draft202012Validator(self.tool_map[action["name"]]["input_schema"])
-            error = next(validator.iter_errors(action["arguments"]), None)
-            if error:
-                raise ToolError(error.message)
-            data, refs = getattr(self, "_" + action["name"])(**action["arguments"])
-            observation = self._observation(True, "ok", data, refs)
+            else:
+                validator = Draft202012Validator(self.tool_map[action["name"]]["input_schema"])
+                error = next(validator.iter_errors(action["arguments"]), None)
+                if error:
+                    raise ToolError(error.message)
+                data, refs = getattr(self, "_" + action["name"])(**action["arguments"])
+                observation = self._observation(True, "ok", data, refs)
         except (ValueError, DecimalException) as exc:
             observation = self._observation(False, "invalid_action", {"message": str(exc)[:400]})
-        self.actions.append({"raw": text, "action": action, "observation": observation})
+        self._record(text, action, observation, repairs, started)
         if self.submission is not None:
             self.finish("submitted")
         elif len(self.actions) >= budgets["max_actions"]:
@@ -263,19 +368,29 @@ class ResearchEpisode:
         self.discovered.update(item["table_id"] for item in selected)
         next_cursor = None
         if offset + 4 < len(matches):
-            next_cursor = uuid.uuid4().hex
+            # Deterministic IDs make action replay possible; uuid4 would make a recorded
+            # cursor meaningless when the episode is re-executed from its initial state.
+            next_cursor = "cursor-" + hashlib.sha256(
+                json.dumps([query_key, offset + 4], ensure_ascii=False, sort_keys=True).encode()
+            ).hexdigest()[:16]
             self.cursors[next_cursor] = (query_key, offset + 4)
         return {"matches": selected, "next_cursor": next_cursor}, []
 
-    def _read_table(self, table_id):
+    def _read_table(self, table_id, period=None):
         if table_id not in self.discovered:
             raise ToolError("table_id must first be observed in search_documents")
         document, table = self.tables[table_id]
-        refs = [cell["cell_id"] for cell in table["cells"]]
+        cells = table["cells"]
+        if period is not None:
+            cells = [cell for cell in cells if cell["period"] == period]
+            if not cells:
+                raise ToolError("no cells for the requested period")
+        refs = [cell["cell_id"] for cell in cells]
         self.observed.update(refs)
-        data = {key: table[key] for key in ("table_id", "scope", "page", "cells")}
+        data = {key: table[key] for key in ("table_id", "scope", "page")}
+        data["cells"] = deepcopy(cells)
         data.update({key: document[key] for key in ("document_id", "entity_id", "currency", "scale")})
-        return deepcopy(data), refs
+        return data, refs
 
     def _calculate(self, operation, operands):
         if any(ref not in self.observed for ref in operands):

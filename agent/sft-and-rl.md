@@ -1,6 +1,6 @@
 # OCR 图像资产、视觉 SFT 与 Agentic RL 的联合设计
 
-状态：2026-10-19 更新。用户已确认接入 PDF 页面及 OCR 检测区域。本设计明确共用资产、三类训练数据与多模态扩展。普通 SFT 启动器和文本/结构化研究任务的工具环境、参考 Agent SFT 导出、多轮 GRPO 入口已实现，见[RL 运行指南](trainers/rl/README.md)；视觉环境与工具仍为后续设计，尚无 GPU 训练结果。
+状态：2026-10-20 更新。用户已确认接入 PDF 页面及 OCR 检测区域。本设计明确共用资产、三类训练数据与多模态扩展。普通 SFT 启动器、文本/结构化研究任务的工具环境、参考 Agent SFT 导出（含多变体与成功轨迹拒绝采样）、多轮 GRPO 入口、冻结 test split 与 `rl-eval` 已实现，见[RL 运行指南](trainers/rl/README.md)；视觉环境与工具仍为后续设计，尚无 GPU 训练结果。
 
 已实现[治理资产导入](assets.md)，Agent 与视觉 SFT 共用 `EvidenceLoader`，继承既有候选审核、图片关联与血缘。已有结果直接使用，设计明确就进入代码实现，按实际错误迭代。[OCR 图片摸底](inventory.md) 是旧产物的可选诊断，不是开发前置步骤。
 
@@ -233,4 +233,4 @@ data/
 
 分别报告数值/单位/期间/口径准确率、证据支持、表格完整性、工具任务成功率、真实修复率、正常保持率、转交/弃答 precision 与 recall、越权/保护集合、动作/图像/tokens/时延及环境无效率。图像是否实际传入模型与其使用效果分别验收；上传了图片不证明答案依赖图片。
 
-当前已实现治理资产接入、[普通单卡 SFT](trainers/sft/README.md) 和[研究工具 Agent SFT/多轮 GRPO](trainers/rl/README.md)。机器为 4090D × 1，模型为 Qwen/Qwen3.5-0.8B；尚无 GPU 实跑结果。接下来运行首轮训练，再接真实财报任务、视觉工具与 operations 环境。复用现有治理与视觉 SFT，实际遇到的关联错误或误判回到具体样本处理。
+当前已实现治理资产接入、[普通单卡 SFT](trainers/sft/README.md) 和[研究工具 Agent SFT/多轮 GRPO](trainers/rl/README.md)。新增 `rl-import` 复用已接受的真实财报表格转录生成数值任务，新增 `rl-start` 准备实验并在训练时自动衔接 SFT 与 RL，无需预先提供 checkpoint。机器为 4090D × 1，模型为 Qwen/Qwen3.5-0.8B；尚无 GPU 实跑结果，本轮新入口尚未执行。继续推进视觉工具、重放与 operations 环境；复用现有治理与视觉 SFT，具体关联错误或误判回到样本处理。

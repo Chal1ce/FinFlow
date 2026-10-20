@@ -12,8 +12,8 @@ from jsonschema import Draft202012Validator
 from core.flywheel_files import write_json as write_json
 
 AGENT_ROOT = Path(__file__).resolve().parents[1]
-ENVIRONMENT_VERSION = "finflow-research-0.1.0"
-REWARD_VERSION = "research-binary-0.1.0"
+ENVIRONMENT_VERSION = "finflow-research-0.2.0"
+REWARD_VERSION = "research-binary-0.2.0"
 
 
 def digest(path):
@@ -42,6 +42,7 @@ class ResearchCase:
     fixture: dict
     oracle: dict
     registry: dict
+    provenance: dict | None = None
 
     @classmethod
     def load(cls, root, relative, *, allow_design=False):
@@ -62,10 +63,21 @@ class ResearchCase:
             raise ValueError("task/oracle identity mismatch")
         if task["context"]["scope_id"] != fixture["scope_id"] or fixture["track"] != "research" or oracle["track"] != "research":
             raise ValueError("research case scope/track mismatch")
+        if fixture["synthetic"] != manifest["synthetic"]:
+            raise ValueError("case and fixture synthetic flags disagree")
+        provenance = values.get("provenance")
+        if not manifest["synthetic"] and not provenance:
+            raise ValueError("governed research cases require bound provenance")
+        if provenance and (
+            provenance["case_id"] != manifest["case_id"]
+            or provenance["work_uid"] != manifest["grouping"]["source_group"]
+            or provenance["split"] != manifest["split"]
+        ):
+            raise ValueError("case provenance identity/split mismatch")
         if set(task["allowed_tools"]) - {"search_documents", "read_table", "calculate", "submit_answer"}:
             raise ValueError("unsupported research tool")
         if any(check["kind"] not in {"research_result", "evidence_observed"} for check in oracle["checks"]):
             raise ValueError("this verifier supports numeric research tasks only")
         if not any(check["kind"] == "research_result" for check in oracle["checks"]):
             raise ValueError("research oracle has no numeric result")
-        return cls(manifest, task, fixture, oracle, values["tool_registry"])
+        return cls(manifest, task, fixture, oracle, values["tool_registry"], provenance)

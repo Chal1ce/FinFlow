@@ -7,7 +7,7 @@
       "const": "0.1.0"
     },
     "synthetic": {
-      "const": true
+      "type": "boolean"
     },
     "scope_id": {
       "type": "string",
@@ -366,5 +366,5 @@
     "lineage_edges"
   ],
   "additionalProperties": false,
-  "description": "V0.1 host-only normalized synthetic snapshot; a future builder maps it to isolated SQLite and files. Not a live database dump."
+  "description": "Host-only normalized isolated snapshot; synthetic cases or governed financial table projections. Not a live database dump."
 }

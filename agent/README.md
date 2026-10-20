@@ -1,6 +1,6 @@
 # FinFlow Agentic RL V0.1 设计
 
-状态：2026-10-19 更新。已实现治理资产导入、普通文本/视觉 SFT 启动器，以及研究任务的可执行环境、Decimal 计算/私有奖励、合成 task 构建、参考工具 SFT 导出和单卡多轮 GRPO 启动器。GPU 训练与实验结果尚未执行；图片观察和治理排障环境继续开发。旧样例轨迹仍为 `design_example`，未执行、未评分、不可直接用于训练。当前可运行入口见[RL 指南](trainers/rl/README.md)。
+状态：2026-10-20 更新。已实现治理资产导入、普通文本/视觉 SFT 启动器，以及研究任务的可执行环境、Decimal 计算/私有奖励、合成/已审核财报表格 task 构建、参考工具 SFT 导出、单卡多轮 GRPO 启动器、冻结 test split 与 `rl-eval`、SFT 多变体/成功轨迹拒绝采样导出。新增 `rl-start`，从无数据/checkpoint 开始准备合成实验，训练时自动衔接 SFT → LoRA → RL。GPU 训练与本轮新入口的运行结果尚未执行；图片观察和治理排障环境继续开发。旧样例轨迹仍为 `design_example`，未执行、未评分、不可直接用于训练。入口见[RL 指南](trainers/rl/README.md)。
 
 目录约定（2026-10-19）：`agent/` 是本项目 Agentic RL 的统一入口，集中保存财报取证、数据治理与故障排查的设计、契约、样例，以及后续环境、工具、验证器和训练适配实现。
 
@@ -199,7 +199,7 @@ Bad case 分类：检索漏召回、实体/期间/口径错、取数错、单位
 
 ## 9. 训练与评测
 
-首条训练链路采用 ms-swift 多轮 GRPO，与 SFT 共用训练栈；核心环境不导入 GPU 框架。用户已确定 4090D × 1、Qwen/Qwen3.5-0.8B；当前配方为 BF16 LoRA r8、每题 4 条在线轨迹、vLLM colocate。实际显存和更新效果待 GPU 运行。先完成 research，再接 operations，之后做混合与联动；verl 保留为后续适配参考。
+首条训练链路采用 ms-swift 多轮 GRPO，与 SFT 共用训练栈；核心环境不导入 GPU 框架。用户已确定 4090D × 1、Qwen/Qwen3.5-0.8B；当前配方为 BF16 LoRA r8、每题 4 条在线轨迹、4 题/optimizer step、200 步、dynamic sampling、vLLM colocate，并保留冻结 test split 与严格证据评测。实际显存和更新效果待 GPU 运行。先完成 research，再接 operations，之后做混合与联动；verl 保留为后续适配参考。
 
 比较基础模型+工具、工具 SFT、SFT+GRPO。固定模型家族、环境、题集、预算、采样与上下文；记录额外数据和训练量，必要时增加继续 SFT 对照。用独立保留任务检查效果，不能用训练奖励均值代替业务成功率。
 
@@ -224,7 +224,7 @@ Bad case 分类：检索漏召回、实体/期间/口径错、取数错、单位
 
 ```text
 agent/
-  cli.py                     # sft / rl-build / rl-sft / rl / rl-report / 资产命令
+  cli.py                     # sft / rl-build / rl-import / rl-sft / rl / rl-eval / rl-report / 资产命令
   README.md                  # 总体设计与实施路线（已有）
   multimodal.md              # 页面与OCR区域的多模态扩展设计（已有）
   schemas/                   # 任务/环境/验收/轨迹契约（已有）
@@ -235,18 +235,19 @@ agent/
   tools/                     # research / operations 注册与执行
   adapters/                  # 治理资产导入/OCR摸底已实现；stage适配待实现
   verifiers/                 # 私有研究oracle与终局奖励（已实现）
-  datasets/                  # 合成研究任务与实际执行的参考SFT导出（已实现）
+  datasets/                  # 合成/治理表格任务、原行列血缘、执行式参考SFT导出
+  pipeline.py                # 无checkpoint准备实验、自动衔接SFT与RL、阶段恢复
   replay/                    # 日志检查与动作重放
   trainers/sft/              # 单卡Qwen3.5-0.8B LoRA启动（已实现，未GPU实跑）
   trainers/rl/               # 单卡ms-swift多轮GRPO、原生捕获、报告（已实现，未GPU实跑）
-  evaluation/                # 冻结评测与报告
+  evaluation/                # 冻结 test 评测、reference/replay/model 策略（已实现）
 data/agent/
   snapshots/ cases/ episodes/ releases/ evaluations/
 ```
 
 `agent/adapters/` 对接现有证据、服务与存储接口；Agent 环境、任务和训练逻辑集中在 `agent/`，现有数据处理模块继续提供基础能力。真实数据、运行轨迹与 checkpoint 放在被忽略的 `data/agent/` 下，以 manifest/hash 关联。
 
-`agent*` 已加入 setuptools discovery，基础 schema、tools.json 及 SFT/RL 配方随包分发。GPU依赖独立 requirements；RL 的 ms-swift 固定到已查阅的上游 commit，GPU 兼容性尚未实跑。完整实验配方为版本化 JSON，manifest 记录实际依赖、参数及代码 hash，不写 key。治理导入与视觉 SFT 共用 `training/sft_evidence.py`；研究工具与 Agent SFT/RL 入口已实现，真实财报任务生成、视觉工具和 operations 环境继续开发。
+`agent*` 已加入 setuptools discovery，基础 schema、tools.json 及 SFT/RL 配方随包分发。GPU依赖独立 requirements；RL 的 ms-swift 固定到已查阅的上游 commit，GPU 兼容性尚未实跑。完整实验配方为版本化 JSON，manifest 记录实际依赖、参数及代码 hash，不写 key。治理导入与视觉 SFT 共用 `training/sft_evidence.py`；`rl-import` 复用已接受的 `table_structure` 样本及既有 split，生成财报数值任务并保留原表格坐标。视觉工具和 operations 环境继续开发。
 
 Git 跟踪设计、schema、代码、非敏感配方和小型合成 fixture；真实语料、oracle、轨迹和 checkpoint 保存在被忽略的数据目录，以文件清单/内容 hash 引用。公开数据包须独立检查来源权利。
 
@@ -273,4 +274,4 @@ P1/P2 的验证应覆盖真实状态变化及错误恢复，不只检查返回�
 
 ## 13. 当前待定项
 
-首次 GPU 执行与实际显存/奖励分布；真实财报任务 adapter；operations 有界 stage adapter；通用轨迹导出与动作重放；V0.2 媒体 schema、视觉 fixture 及多轮工具图像适配。来源与资产决定复用已有治理记录，具体缺失在接入时报错处理。
+本轮新入口的实际运行与真实财报格式覆盖；首次 GPU 执行与实际显存/奖励分布；operations 有界 stage adapter；通用轨迹导出与动作重放；V0.2 媒体 schema、视觉 fixture 及多轮工具图像适配。继续写代码不以用户提供 checkpoint、GPU 连接或新校准为前置，来源与资产决定复用已有治理记录，具体缺失在接入时报错处理。

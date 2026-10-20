@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finflow:agentic:provenance:0.1.0",
+  "type": "object",
+  "required": ["format", "case_id", "work_uid", "split", "source", "tables"],
+  "properties": {
+    "format": {"const": "finflow-research-provenance-v1"},
+    "case_id": {"type": "string", "minLength": 1},
+    "work_uid": {"type": "string", "minLength": 1},
+    "split": {"enum": ["train", "validation"]},
+    "source": {
+      "type": "object",
+      "required": ["path", "manifest_sha256", "samples_sha256", "evidence_sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "samples_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "tables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["table_id", "sample", "evidence", "cell_coordinates"],
+        "properties": {
+          "table_id": {"type": "string", "minLength": 1},
+          "sample": {"type": "object"},
+          "evidence": {"type": "object"},
+          "cell_coordinates": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["cell_id", "row_index", "column_index", "raw_value"],
+              "properties": {
+                "cell_id": {"type": "string", "minLength": 1},
+                "row_index": {"type": "integer", "minimum": 0},
+                "column_index": {"type": "integer", "minimum": 0},
+                "raw_value": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

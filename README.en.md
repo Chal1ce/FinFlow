@@ -85,7 +85,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Models, admission, review, retries, lineage, releases | [Daily data flywheel](docs/en/data-flywheel.md) |
 | Messaging apps or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) · [Telegram](docs/en/app-telegram.md) · [Discord](docs/en/app-discord.md) · [Slack](docs/en/app-slack.md) |
 | Text or visual SFT from v7 evidence | [Text SFT](docs/en/sft.md) · [Visual SFT](docs/en/sft-vision.md) |
-| Single-GPU financial Agent SFT and multi-turn GRPO | [Agentic RL guide (Chinese)](agent/trainers/rl/README.md) |
+| Financial Agent: prepare without checkpoints, governed table tasks, SFT → GRPO | [Agentic RL guide (Chinese)](agent/trainers/rl/README.md) |
 | Generation methods and learned mixtures | [Methods](docs/en/training-methods.md) · [Mixtures](docs/en/data-mixtures.md) · [DoReMi / RegMix](docs/en/mixture-experiments.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
 | Actual missing configuration | [Environment check](docs/en/environment-check.md) |
