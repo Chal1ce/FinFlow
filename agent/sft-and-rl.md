@@ -1,8 +1,8 @@
 # OCR 图像资产、视觉 SFT 与 Agentic RL 的联合设计
 
-状态：2026-10-20 更新。用户已确认接入 PDF 页面及 OCR 检测区域。本设计明确共用资产、三类训练数据与多模态扩展。普通 SFT 启动器、文本/结构化研究任务的工具环境、参考 Agent SFT 导出（含多变体与成功轨迹拒绝采样）、多轮 GRPO 入口、冻结 test split 与 `rl-eval` 已实现，见[RL 运行指南](trainers/rl/README.md)；视觉环境与工具仍为后续设计，尚无 GPU 训练结果。
+本设计说明 OCR 资产如何用于视觉 SFT、Agent 工具示范和在线 RL。结构化表格研究任务的准备、SFT、GRPO 与冻结评测命令见[RL 运行指南](trainers/rl/README.md)。
 
-已实现[治理资产导入](assets.md)，Agent 与视觉 SFT 共用 `EvidenceLoader`，继承既有候选审核、图片关联与血缘。已有结果直接使用，设计明确就进入代码实现，按实际错误迭代。[OCR 图片摸底](inventory.md) 是旧产物的可选诊断，不是开发前置步骤。
+已实现[治理资产导入](assets.md)，Agent 与视觉 SFT 共用 `EvidenceLoader`，继承既有候选审核、图片关联与血缘。资产导入沿用已有治理结果。[OCR 图片摸底](inventory.md) 是旧产物的可选诊断，用于检查历史文件映射。
 
 ## 1. 总体方案
 
@@ -51,9 +51,9 @@ flowchart TB
 
 - `result.json` 的 `image_assets` 保留 `source_key/path/page/purpose/sha256`。区域 `purpose=region`；返回输入页标为 `original_page`；其余可能是 `page_or_debug`。
 - Serving 的 markdown 区域按页保存。Cloud 同时保留旧别名和页限定副本；应以映射中的页限定路径为准，不能用可能重复的原文件名做全局身份。
-- OCR 不一定返回每个 table 的独立 PNG；有的表格只有布局块、文字或 HTML。`image/chart/table/figure` 检测块不保证都已形成可读区域文件。
+- OCR 不一定返回每个 table 的独立 PNG；有的表格只有布局块、文字或 HTML。`image/chart/table/figure` 检测块通过资产状态记录区域文件的可用性。
 - `images/` 中的存在性只能说明有文件。整页、正文区域、模型可视化和调试图需要按映射与内容分类；调试叠框图不默认充当原始财务证据。
-- `inputImage` 的用途标签不能独立证明它与原 PDF 像素/方向一致。原页定位仍须核对尺寸、旋转、展平和变换；需要确定原页时可使用带版本的 PDF 渲染。
+- `inputImage` 的用途标签保留来源用途信息。原页定位仍须核对尺寸、旋转、展平和变换；需要确定原页时可使用带版本的 PDF 渲染。
 
 因此接入顺序为：**读取 OCR 映射 → 精确关联页面与 block → 校验本地文件和 hash → 解码/尺寸检查 → 登记视觉资产**。不采用全目录 glob 后直接生成问答的方式。
 
@@ -69,7 +69,7 @@ flowchart TB
 | Occurrence | 某报告/版本/页/block 上出现的图像 | 相同图片可以有不同来源、实体与上下文 |
 | Derivation | 从父图或 PDF 得到的新图及操作参数 | 追溯裁剪、格式转换、缩放和页面渲染 |
 
-不能因 blob 相同就抹掉多次 occurrence；也不能把规范化 PNG 的 hash 当作原始 JPEG 的 hash。
+相同 blob 保留各次 occurrence，原文件与规范化 PNG 分别登记 hash。
 
 拟升级的媒体 manifest 至少记录：原文件与规范化文件的各自 hash/MIME/尺寸、文档/work/version、OCR 工件与后端/版本、page/block/source_key、原始 `ocr_label`、用途、父资产、坐标系/变换，以及来源准入和质量决定的引用。
 
@@ -87,7 +87,7 @@ flowchart TB
 
 同一资产在不同任务中的可用性可以不同。来源训练准入、资产质量、任务可回答性是分别校验的门槛。
 
-直接沿用已批准 visual candidate 的准入、审核和关联记录。接口缺字段时补 adapter；已完成治理的资产不重新送审或要求人工校准。
+资产适配器沿用已批准 visual candidate 的准入、审核、图片关联与血缘。
 
 ### 3.3 快照与数据划分
 
@@ -95,7 +95,7 @@ flowchart TB
 
 在生成任何问答/轨迹之前，对逻辑作品、报告版本、同源整页/区域、相关重复内容、OCR 版本与故障族建立统一分组。视觉 SFT、Agent SFT、RL 与最终评测共同使用分组账本，并承接已有 CPT/SFT 的来源使用记录。
 
-同一图像的裁剪、缩放、重编码或 OCR 修订不能跨 train/test。复用的通用 logo 等无关图先从任务候选中筛除，避免将无关重复误作金融任务证据。校准集、开发集和冻结评测分开；无法独立隔离的任务显式标注 source_seen。
+同一图像的裁剪、缩放、重编码或 OCR 修订不能跨 train/test。复用的通用 logo 等无关图先从任务候选中筛除，避免将无关重复误作金融任务证据。开发集与冻结评测分开；无法独立隔离的任务显式标注 source_seen。
 
 ## 4. 视觉能力 SFT
 
@@ -103,13 +103,13 @@ flowchart TB
 
 现有 [training/sft_vision.py](../training/sft_vision.py) 支持 `visual_qa`、`table_structure`、`visual_description`、`visual_conversation`。默认 [sft-vision 配方](../config/sft-vision.json) 只启用前两项。
 
-当前限制需保留：每条样本一张 PNG；同图对话共享首轮图片；表格抽取只接受简单完整矩形表；数值保留原字符串；证据区域采用当前图的 0–1000 归一化整数坐标。复杂表头不能被强行压平成损失信息的矩形 JSON。
+导出格式：每条样本一张 PNG；同图对话共享首轮图片；表格抽取只接受简单完整矩形表；数值保留原字符串；证据区域采用当前图的 0–1000 归一化整数坐标。复杂表头不能被强行压平成损失信息的矩形 JSON。
 
 Agent 裁剪采用当前 image_id 的像素坐标。两类数据交换时显式转换坐标并记录版本：对宽 W、高 H 的图片，以 x·W/1000、y·H/1000 换算，左/上向下取整、右/下向上取整，使用半开矩形并验证边界。不同裁剪图的 bbox 不能直接复制，须沿已验证的父子变换映射；模型输入缩放后的坐标另记。
 
 | 任务 | 输入与输出 | 设计状态 |
 | --- | --- | --- |
-| 看图问答、简单表格抽取、图像描述、同图对话 | 图片 → 可见事实/结构 | 复用现有代码，真实模型流程待验收 |
+| 看图问答、简单表格抽取、图像描述、同图对话 | 图片 → 可见事实/结构 | 使用现有生成与审核配方 |
 | 视觉定位 | 图片＋问题 → 值及支持区域 | 新配方；证据框作为监督输出，不能提前放进输入 |
 | 视觉计算 | 一张/多张图片＋问题 → 数值、单位及证据 | 新配方；视觉取数人工/独立核对，程序验证计算 |
 | 图像与 OCR 核对 | 图片＋有版本的可错 OCR → 不一致项/有依据的修订建议 | 新配方；明确属于 vision_with_ocr |
@@ -127,17 +127,17 @@ Agent 裁剪采用当前 image_id 的像素坐标。两类数据交换时显式�
 
 ### 4.3 生成、审核与发布
 
-现有治理资产 → 复用已有 split 选择任务 → 现有教师生成/规则检查/视觉审核 → 去重发布。人工抽查按实际 bad case 安排，不额外增加固定规模的校准前置阶段。
+治理资产 → 按既有 split 选择任务 → 教师生成与规则检查 → 视觉审核 → 去重发布。
 
-规则校验 hash、格式、区域边界、表格完整性和程序算术；视觉审核检查图片实际支持、数值符号、实体/期间/口径、单位、所有轮次。审核器与教师都可能出错，独立数值金标不能直接复制同一份待诊断 OCR。
+规则校验 hash、格式、区域边界、表格完整性和程序算术；视觉审核检查图片实际支持、数值符号、实体/期间/口径、单位、所有轮次。参考数值绑定独立核对的原图与来源。
 
-复用现有 vision JSONL、`images/<sha256>.png` 与 `images.jsonl` 的便携思路。新版本需显式绑定每个内容块的 image_id，支持多图顺序和派生关系；现有单图导出不宣称已经支持这些扩展。
+视觉导出复用 vision JSONL、`images/<sha256>.png` 与 `images.jsonl`。多图扩展通过内容块的 image_id 记录图片顺序与派生关系。
 
 ## 5. Agent SFT：实际工具示范
 
 Agent SFT 的单位是完整可重放 episode，包含：task、工具表、逐步 assistant 动作、tool 观察中的实际媒体、最终提交、私有验收结果与媒体/代码版本。
 
-教师在相同隔离环境中实际调用工具，不能只写一段看似成功的对话。示范经动作重放、来源/媒体校验和最终 verifier 后再准入。
+教师在隔离环境中执行工具，示范经动作重放、来源/媒体校验与最终 verifier 筛选。
 
 两条典型路径：
 
@@ -146,7 +146,7 @@ Agent SFT 的单位是完整可重放 episode，包含：task、工具表、逐�
 
 示范选择遵循：完成 case 要求且无越权；可修复任务不能靠转交通过；预置业务故障可以被正确处理并成为正例。教师自己的无效调用不作为正例动作监督，可保留必要上下文并 mask 对应 assistant 输出。
 
-Agent SFT 监督 assistant 工具调用与最终提交，图像、用户问题和 tool 观察作为上下文，不进入目标 loss。保存能解释决策的简短事实依据，不要求或收集隐藏推理链。
+Agent SFT 监督 assistant 工具调用与最终提交，图像、用户问题和 tool 观察作为上下文，不进入目标 loss。
 
 现有 [sft_export.validate_messages](../training/sft_export.py) 要求 system 后按 user/assistant 交替，不支持 tool 角色。新增 Agent exporter/loader 承载类型化工具调用与多模态观察，再按已选训练框架序列化；保留原有直接 SFT 协议。
 
@@ -154,9 +154,9 @@ Agent SFT 监督 assistant 工具调用与最终提交，图像、用户问题�
 
 ### 6.1 训练输入与轨迹
 
-RL 发布的是任务、隔离初态、允许媒体与工具、版本和私有 oracle。在线轨迹由当前行为策略产生；教师示范不直接冒充 on-policy rollout。
+RL 发布的是任务、隔离初态、允许媒体与工具、版本和私有 oracle。在线轨迹由当前行为策略产生，教师示范用于 SFT。
 
-环境的真实图像观察、裁剪参数与预处理版本必须绑定到训练后端。保存 assistant token IDs、行为策略 logprobs、loss mask 及实际图像输入/processor 产物或可确定重建参数。后端能调用文字工具，并不证明它能在多轮 tool 返回中正确传递图片；实施时必须实际验证这一链路。
+环境的真实图像观察、裁剪参数与预处理版本必须绑定到训练后端。保存 assistant token IDs、行为策略 logprobs、loss mask 及实际图像输入/processor 产物或可确定重建参数。多轮工具返回使用有序的 text/image 内容块。
 
 保留有效失败与组内相对奖励所需轨迹，不按成功比例手工拼接当前策略样本。基础设施异常单列，不让随机媒体丢失污染策略失败标签。
 
@@ -169,13 +169,13 @@ RL 发布的是任务、隔离初态、允许媒体与工具、版本和私有 o
 
 沿用完成任务 `1`、有效失败 `0`、越权或破坏保护集合 `-1`。图片查看次数、裁剪次数、描述长度不直接加分；judge 初期只辅助审计。若全零组过多，先检查任务可解性、暖启动与难度课程，再决定经过验证的中间奖励。
 
-图片读数声明只表示 Agent 认为看到了某个值，不能成为金标；算术正确也不能证明取数正确。恢复校验实际字节和可信旧 hash；重新 OCR 生成新版本、新 hash 和新审核流程，不能改旧期望 hash 或继承旧批准。
+视觉取数声明交给独立验证器核对来源、数值与口径。文件恢复使用原登记 hash；重新 OCR 创建新版本、新 hash 和新的审核记录。
 
 ### 6.3 有界重新提取
 
 拟增加 `reextract_visual(visual_asset_id, processor_profile_id, request_key, expected_state_version)`，通过有界 stage adapter 执行。输入仅允许宿主登记的处理器配方 ID；不能传任意命令、路径、提示词或配置。
 
-它创建派生版本及任务，返回排队/处理状态；最终仍须读取新工件、独立核对和复验。同 key 幂等、范围/预算/状态版本与保护集合约束沿用现有设计。真实外部 OCR/模型调用单独配置；早期固定处理器 fixture 需标明 simulated，实际写文件/数据库，后续另测真实处理器迁移。
+它创建派生版本及任务，返回排队/处理状态；最终仍须读取新工件、独立核对和复验。同 key 幂等、范围/预算/状态版本与保护集合约束沿用现有设计。OCR/模型处理器通过独立配置接入 stage adapter。
 
 ## 7. 一个贯通 SFT 与 RL 的案例
 
@@ -189,48 +189,8 @@ RL 发布的是任务、隔离初态、允许媒体与工具、版本和私有 o
 | Agentic RL | 同类任务的训练 split 变体和隔离环境 | 当前策略自行选择查阅/处理路径，按实际结果得分 |
 | 冻结评测 | 未用于上述训练/校准的作品和场景族 | 检查新来源及新故障上的恢复与误修率 |
 
-同一来源可以在训练 split 内贡献这几类数据；不能再把它的换字问题、其他裁剪或 OCR 版本作为独立最终测试。示例中的 `-120` 只是说明协议，尚无对应图像 fixture 或执行结果。
+同一来源可以在训练 split 内贡献这几类数据；不能再把它的换字问题、其他裁剪或 OCR 版本作为独立最终测试。该例使用合成数值说明数据流。
 
-## 8. 模块与工件布局
+## 8. 运行入口
 
-复用上游 `processing/visual_assets.py`、`visual_asset`、v7 release 和 `training/sft_vision.py`。新增 Agent 设计与实现集中在 `agent/`：
-
-```text
-agent/
-  README.md                 # 总体设计（已有）
-  multimodal.md             # 视觉工具与媒体协议（已有设计）
-  sft-and-rl.md              # 联合数据与训练设计（本文）
-  cli.py                    # sft / import-assets / inventory / verify-inventory（已实现）
-  adapters/ocr_inventory.py # 图片摸底（已实现）
-  adapters/visual_assets.py  # v7 到环境媒体，复用SFT证据loader（已实现）
-  datasets/                 # Agent SFT 构建/导出、RL task 构建及共用分组
-  tools/                    # 图片查看/裁剪/取数、受控处理
-  verifiers/                # 视觉答案与处理后状态验收
-  trainers/sft/             # 普通文本/视觉SFT单卡LoRA入口已实现；工具轨迹待接
-  trainers/rl/              # 已实现 ms-swift 多轮 GRPO；视觉适配继续开发
-data/
-  media/                    # 现有上游视觉资产
-  training/sft/             # 现有直接 SFT 工件
-  agent/
-    snapshots/ cases/ episodes/
-    releases/ evaluations/ # 独立版本的 Agent SFT 与 RL 数据产品
-```
-
-治理资产 adapter、共享 SFT loader、普通文本/视觉 SFT 启动器，以及结构化研究环境、参考 Agent SFT 导出和多轮 GRPO 入口已实现；视觉与 operations 环境继续开发。任务、工具与运行以 manifest/hash 绑定，数据构建和模型训练各自显式启动。
-
-## 9. 实施里程碑与比较方式
-
-| 阶段 | 交付 | 验收重点 |
-| --- | --- | --- |
-| A 资产接入 | `import-assets` 复用既有治理结果；旧产物按需诊断 | 承接上游图片与页/block 身份，不增加重复审核 |
-| B 直接视觉 SFT | 复用现有单图 QA/简单表格代码 | 先跑通生成与导出，按实际错误迭代 |
-| C 视觉环境与 Agent SFT | V0.2 机器契约、视觉工具、教师实际轨迹、重放与 exporter | 漏负号、缺表头、图像恢复、不可读与正常对照能按各自标准验收 |
-| D 多模态 RL | 锁定训练栈，原生捕获、参数更新与 checkpoint | 当前策略有效 rollout，实际图像进模型，训练可恢复，独立评测报告完整 |
-
-先复用现有表格图，随后加入统计图；数量按实际运行结果调整。无标签图的近似读取另定容差，不能混作精确金融计算。
-
-同一模型家族比较：基础视觉模型＋工具、视觉能力 SFT＋工具、再加 Agent SFT、再加 RL。资源允许时增加等训练预算的继续 SFT 对照；记录每阶段数据和训练量，避免把不同输入条件或额外数据的收益全归因于 RL。
-
-分别报告数值/单位/期间/口径准确率、证据支持、表格完整性、工具任务成功率、真实修复率、正常保持率、转交/弃答 precision 与 recall、越权/保护集合、动作/图像/tokens/时延及环境无效率。图像是否实际传入模型与其使用效果分别验收；上传了图片不证明答案依赖图片。
-
-当前已实现治理资产接入、[普通单卡 SFT](trainers/sft/README.md) 和[研究工具 Agent SFT/多轮 GRPO](trainers/rl/README.md)。新增 `rl-import` 复用已接受的真实财报表格转录生成数值任务，新增 `rl-start` 准备实验并在训练时自动衔接 SFT 与 RL，无需预先提供 checkpoint。机器为 4090D × 1，模型为 Qwen/Qwen3.5-0.8B；尚无 GPU 实跑结果，本轮新入口尚未执行。继续推进视觉工具、重放与 operations 环境；复用现有治理与视觉 SFT，具体关联错误或误判回到样本处理。
+[治理资产导入](assets.md) · [单卡 SFT](trainers/sft/README.md) · [Agent SFT 与 GRPO](trainers/rl/README.md)

@@ -21,7 +21,6 @@ Run all commands from the repository root. Keep credentials in your local `.env`
 collection targets belong in `config/collection.json`, and recipes and budgets in
 `config/flywheel.json`.
 
-
 Optional [small-model refiner](text-refiner.md): choose audit/apply mode, model and rewrite policy in `.env`; original evidence is preserved.
 
 ## Choose an entry point

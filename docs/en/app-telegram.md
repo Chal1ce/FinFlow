@@ -75,5 +75,3 @@ evidence version, and expiry are enforced by the shared service.
 - Events and polling position commit together. Restart resumes from that position, subject to Telegram's retention period; extended downtime can lose messages.
 - Interrupted sends may duplicate notifications; confirmed stages keep their receipts.
 - `app-telegram` is not approved for training by default. Review its source policy before publishing candidates.
-
-Static checks are complete; live messaging and functional validation remain pending.

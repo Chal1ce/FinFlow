@@ -6,7 +6,6 @@ nav_order: 3
 # 每日数据飞轮运行说明
 {: .no_toc }
 
-
 可选扩展：[小模型精炼插件](text-refiner.md)提供默认关闭的附加 CPT 分支，统一 `.env` 配置，支持 audit/apply 和独立重写开关。
 
 ## 本页目录
@@ -14,7 +13,6 @@ nav_order: 3
 
 1. TOC
 {:toc}
-
 
 [文档首页](index.md) · [项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
@@ -79,7 +77,7 @@ python -m workflow.flywheel_cli preflight
 
 分页请求保持每个窗口的 query、过滤器和页大小不变，完整登记每页记录后才保存下一 cursor。发现预算按完整页计算，`max_results` 非页大小整数倍时可能多返回不足一页的记录，后续处理仍受任务预算限制。OpenAlex 页大小上限为 100；如需增加 API 配额，可在 `.env` 配置 `OPENALEX_API_KEY`，通过 Authorization header 发送，不拼入持久化 URL。参见 [OpenAlex 官方鉴权说明](https://help.openalex.org/api/authentication/)。
 
-`source_policy` 默认空，代表尚未确认训练使用。先确认拟使用范围，再为相应来源填写，例如：
+`source_policy` 按来源名配置训练准入，设置 `training=approved` 后启用该来源的候选处理：
 
 ```json
 "source_policy": {
@@ -87,9 +85,9 @@ python -m workflow.flywheel_cli preflight
 }
 ```
 
-这项批准必须反映实际来源使用决定，不能把开放获取或抓取成功当成自动批准。Crossref、OpenAlex 发现的文章需按其实际 PDF 许可检查；如果同一发现来源内许可不同，先保持来源未批准，针对具体候选完成人工确认后再决定更细的来源策略。本版策略以来源名为粒度，不自动判断每篇论文的训练授权。
+`source_policy` 以来源名为粒度，`training` 和 `allowed_methods` 分别控制训练准入和候选生成方法。
 
-默认 `require_ocr_pass=true`，OCR 有告警的候选先留待复核。原文、视觉描述、翻译、改写分别判定，技术失败进入有上限的重试；拒绝、截断、冲突和业务待复核不会自动反复请求。正式路径没有 mock 回退。
+默认 `require_ocr_pass=true`，OCR 有告警的候选先留待复核。原文、视觉描述、翻译、改写分别判定，技术失败进入有上限的重试；拒绝、截断、冲突和业务待复核不会自动反复请求。
 
 建议首次少量运行并按四类候选抽查。视觉审核使用实际图片和显式记录的 OCR 上下文；数字差异是异常提示，由审核模型判断是否有来源支持，不作为唯一准入依据。
 
@@ -125,7 +123,7 @@ python -m workflow.flywheel_cli trace --candidate-id CANDIDATE_ID
 
 任务状态为 `pending/running/succeeded/retry_wait/failed/deferred/rejected/needs_review`；显式人工替换的旧任务为 `superseded`。租约和系统文件锁防止重复执行；持有每日整轮锁的新进程可以恢复已中断的旧任务。单项失败允许独立候选继续推进。
 
-退出码：`0` 成功或无变化，`1` 部分完成/有积压，`2` 配置或整轮失败。每日摘要包含阶段错误、处理位置、修复建议、队列、视觉状态、候选状态、模型请求/用量、耗时、release 和数据集路径。`errors` 表示实际失败，`stop_reasons` 单独记录模型请求、任务或时间额度耗尽；额度停止可以续跑，不等于整轮崩溃。错误摘要不输出供应商原始异常文本、请求体或凭证。请求预算跨治理、视觉、翻译、改写、评审共享；用量未返回时记录缺失。
+退出码：`0` 成功或无变化，`1` 部分完成/有积压，`2` 配置或整轮失败。每日摘要包含阶段错误、处理位置、修复建议、队列、视觉状态、候选状态、模型请求/用量、耗时、release 和数据集路径。`errors` 表示实际失败，`stop_reasons` 单独记录模型请求、任务或时间额度耗尽；额度停止后可续跑。错误摘要不输出供应商原始异常文本、请求体或凭证。请求预算跨治理、视觉、翻译、改写、评审共享；用量未返回时记录缺失。
 
 `report --latest --format markdown` 只显示所选日期的最新运行和可读诊断；不加 `--latest` 汇总当天全部运行，默认 JSON 也包含顶层 `errors` 和 `stop_reasons`。旧版本下载错误只记了类型时，报告会尝试从当前下载清单补充原因，并标记 `details_from=current_download_manifest`。
 
@@ -141,11 +139,11 @@ python -m workflow.flywheel_cli --config config/flywheel.local.json --data-root 
 
 新启动的 `run` 会向 stderr 输出阶段进度，并在 `manifests/progress/<run_id>.json` 原子保存进度快照。治理阶段细分为表格摘要、文档元数据、文本块上下文，显示已完成/总数，以及本轮模型请求、响应、失败和缓存命中数；等待模型时显示对应角色。`run --no-progress` 关闭终端进度输出，最终 JSON 仍输出到 stdout。进度文件不包含提示词、模型响应或凭证。
 
-升级前已启动的进程无需重启：`status` 从现有任务、步骤和响应缓存读取当前阶段、最近完成的模型步骤及已保存响应数；这个响应数是成功落盘数量的下界，不是实时请求用量，也不包含缓存复用或未保存的响应。细分完成数和精确请求计数从下次运行开始记录。`status --format text` 单次显示可读状态；默认单次 `status` 保持 JSON，新增 `progress` 字段。查看状态只读数据库和本地文件，不迁移数据库、不调用 OCR 或模型。
+`status --format text` 单次显示可读状态，默认单次 `status` 返回 JSON 和 `progress` 字段。缺少细分进度的旧记录会显示任务阶段、最近完成步骤和成功落盘响应数。`status` 只读本地数据库与文件。
 
 已有数据根目录默认会回填所有本地 OCR，并领取所有来源的积压任务。小范围试跑时，可在本地 flywheel JSON 设置 `"processing_scope": "collection"`：回填与任务领取仅处理采集配置中启用的来源和财报公司/年度/类型；关闭 scholarly 后不会继续处理其旧论文队列。`status.active_queue` 为范围内快照，`queue` 仍保留全库快照；已有任务和文件不会删除。该选项控制任务执行，语料发布和资产统计仍沿用现有全库规则。默认 `"all"` 保持原行为；范围调整不改变处理配方身份，已有成功任务可继续复用。
 
-任务限额和整轮时限是协作式边界：正在执行的 HTTP/OCR 请求由其自身 timeout 控制，整轮不会在请求中途强制杀进程。模型结果逐次原子保存；收到成功响应但还未完成下游任务时中断，下次复用该响应。网络响应到达但尚未保存时发生进程终止，供应商可能已计费，下次仍需请求。
+任务数和整轮时限在任务切换时检查，正在执行的 HTTP/OCR 请求使用各自的 timeout。模型响应逐次原子保存，续跑时复用已落盘的成功响应。
 
 ## 4. 本地数据和数据库
 
@@ -175,7 +173,7 @@ python -m workflow.flywheel_cli --config config/flywheel.local.json --data-root 
 
 ## 5. 发布与训练数据
 
-治理包位于 `published/flywheel/RELEASE_ID`。v7 包含正文记录、图表清单、描述、候选、决定、artifact DAG 与实际证据文件。`artifacts.jsonl` 把运行目录中的来源路径映射到包内 `evidence` 路径；所有文件都有 SHA-256 校验。校验和验证完整性，不代表数字签名或来源认证。
+治理包位于 `published/flywheel/RELEASE_ID`。v7 包含正文记录、图表清单、描述、候选、决定、artifact DAG 与证据文件。`artifacts.jsonl` 将来源路径映射到包内 `evidence` 路径，`checksums.sha256` 提供文件完整性校验。
 
 正式语料只从校验通过的 v7 冻结候选读取。每日训练增量位于 `training/pretrain/DELTA_ID`，包括 `corpus.jsonl`、`provenance.jsonl`、`excluded.jsonl`、`manifest.json` 和 `checksums.sha256`。token 上限按目标 tokenizer 对最终正文计数，不包括训练程序未来自行添加的 special tokens；训练程序需自行预留相应空间。样本格式包括 `sample_id/text/split/token_count`。
 
@@ -199,7 +197,7 @@ python -m workflow.flywheel_cli verify data/training/snapshots/finance-cpt-v1
 
 `scripts/run_collection.sh` 已转为飞轮的兼容启动入口；`scripts/run_flywheel.sh` 安全加载 Python 环境并把输出追加到 `logs/flywheel.log`。旧的独立采集 CLI 仍可手动使用，但不要同时给旧流程和飞轮安装定时任务。
 
-配置、预检和少量前台实跑成功后再启用调度。当前没有安装或启用系统任务。
+使用 cron 或 launchd 模板配置每日运行：
 
 Linux/macOS cron 示例是 `ops/fin-doc-flywheel.cron.example`，默认主机当地时间每天 03:00。模板路径需改为实际仓库绝对路径；核对主机系统时区，例如 Asia/Shanghai。日志目录由脚本创建。
 
@@ -217,18 +215,12 @@ launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.chansn.fin-do
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.chansn.fin-doc-flywheel.plist"
 ```
 
-日历触发使用 macOS 系统时区。电脑关机或 OCR 服务不可达时无法保证实时完成；恢复后通过队列继续处理。launchd 休眠补触发的行为以系统运行情况为准。
+日历触发使用 macOS 系统时区。停机或 OCR 服务不可达期间的任务保留在队列，恢复后继续处理。
 
-## 7. 当前验证边界
-
-自动化测试使用临时数据根目录、合成 PDF/图像、测试 tokenizer 和注入的假模型响应；假模型不会从正式 CLI 配置进入发布。已覆盖重跑、租约、互斥、血缘环、token 边界、图表定位、审核阻断、故障重试、模型结果缓存、跨日去重和发布校验。
-
-真实来源服务、OCR 返回差异、多模态描述质量、实际模型鉴权、供应商用量、首次分层人工抽样和系统调度实跑仍需配置后验证。日志目前为本地追加文件，长期运行需由系统日志轮转控制大小。大规模证据快照与候选扫描目前使用累计视图，后续数据量增长时应增加分批索引和存储保留策略。
-
-## 8. 可选 SFT 阶段
+## 7. 可选 SFT 阶段
 
 在本机飞轮配方中设置 `"sft": {"enabled": true, "config": "config/sft.local.json"}`，
 即可在发布与 CPT 构建后生成问答、JSON 抽取和表格计算 SFT；默认为关闭。
 需要额外配置生成与审核角色，表格审核需要视觉模型。
 每日摘要的 `sft_dataset` 记录结果；SFT 请求数加入总数，详细用量位于该字段内。
-独立生成、输出格式及续作方式见 [SFT 数据生成](sft.md)。新增 SFT 尚未功能测试或真实模型验收。
+独立生成、输出格式及续作方式见 [SFT 数据生成](sft.md)。

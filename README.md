@@ -4,7 +4,7 @@
 
 [中文文档网站](https://chal1ce.github.io/FinFlow/zh/) · [English documentation](https://chal1ce.github.io/FinFlow/en/)
 
-把金融文档转成可追溯的预训练与 SFT 数据。
+金融多模态数据飞轮与 Agentic RL：从文档采集、治理和训练数据生成，到金融工具 Agent 的 SFT、GRPO 与评测。
 
 项目自动采集财报、研报与相关论文，串接 OCR、文本与图表治理、多模态描述、
 可选翻译/改写和独立质量审核，再按目标 tokenizer 生成预训练语料。
@@ -23,6 +23,7 @@ PDF、图片、表格和派生文件保存在本地，SQLite 记录任务、版�
 - **自动运行与追溯**：每日增量采集、任务重试、断点恢复、去重、血缘查询及不可变发布。
 - **数据质量与覆盖**：自动生成 CPT/SFT 统计报告、覆盖缺口与版本差异，见[报告指南](docs/quality-report.md)。
 - **跨版本近似去重**：SQLite 增量 MinHash 索引、重复关系与可追溯配比过滤，见[去重指南](docs/near-dedup.md)。
+- **金融 Agent**：财报表格检索、读表与 Decimal 计算，参考工具示范、单卡 SFT/GRPO 和冻结评测。
 - **应用连接**：飞书、Telegram、Discord、Slack 的命令、PDF 导入、图表人工复核和日报；MCP 接口支持外部助手调用。
 
 ## 处理流程
@@ -47,7 +48,6 @@ flowchart LR
 DoReMi/RegMix 是另外显式启动的小型代理训练实验，用于学习配比，不随每日任务自动运行。
 
 可选启用[每日训练版本发布](docs/training-publication.md)：统一 `.env` 配置，自动汇总、近似去重、配比、版本校验及发布；SQLite 记录阶段恢复和血缘，失败保留上一版 `latest`，生成按日 JSON/Markdown 报告。
-
 
 可选[小模型精炼插件](docs/text-refiner.md)：默认关闭，支持仅记录/实际应用、独立重写开关和自选模型；作为附加 CPT 分支保留原始证据、操作血缘与日报。
 
@@ -103,7 +103,7 @@ python -m workflow.cli list
 | 手工处理财报、了解目录和交付内容 | [财报处理与交付](docs/financial-workflow.md) |
 | 调整清洗规则、切片与 LLM 治理 | [清洗与治理](docs/governance.md) |
 | 从 v7 证据生成文本或多模态 SFT | [文本 SFT](docs/sft.md) · [图表多模态 SFT](docs/sft-vision.md) |
-| 金融工具 Agent：无 checkpoint 准备实验、治理表格任务、SFT → GRPO | [Agentic RL 运行指南](agent/trainers/rl/README.md) |
+| 金融工具 Agent：任务构建、SFT、GRPO 与评测 | [Agentic RL 运行指南](agent/trainers/rl/README.md) |
 | 扩展生成方法、调整数据比例或学习配比 | [方法库](docs/training-methods.md) · [数据配比](docs/data-mixtures.md) · [DoReMi / RegMix](docs/mixture-experiments.md) |
 | 从已有 v5/v6 发布包构建语料 | [已有发布包生成预训练语料](docs/pretraining.md) |
 | 部署或连接 OCR 服务 | [PaddleOCR 部署与连接](docs/paddleocr_remote.md) |
@@ -111,15 +111,7 @@ python -m workflow.cli list
 | 查询参数与环境变量 | [命令参考](docs/cli-reference.md) · [配置模板](.env.example) |
 | 给使用说明新增页面或图片 | [文档与图片写作指南](docs/docs-authoring.md) |
 
-## 项目状态
-
-每日飞轮已实现，迁移公开仓库前 149 项离线测试通过。应用连接、SFT 和新增方法/配比为后续实现，目前完成静态检查，尚未功能测试或实连验收。
-DoReMi/RegMix 提供算法适配流程，尚无本项目真实语料训练结果；不宣称复现原论文的规模或性能。
-金融 Agent 已接入合成研究任务、可执行工具环境、参考 SFT 导出和单卡多轮 GRPO 启动器，尚未 GPU 实跑；图片与治理排障环境继续开发。
-真实 OCR/模型服务的完整实跑和输出质量仍需在配置后验证；
-定时模板不会自动安装到系统。正式飞轮没有 mock 回退，未确认的来源与质量问题会保留在审核记录中。
-
-开发与离线检查：
+## 开发
 
 ```sh
 python -m pip install -e '.[dev]'
@@ -127,4 +119,4 @@ python -m pytest -q
 python -m ruff check .
 ```
 
-详细设计与实施范围见[数据飞轮计划](docs/data-flywheel-plan.md)。
+架构说明见[数据飞轮](docs/data-flywheel-plan.md)和[Agentic RL](docs/agentic-rl-review.md)。

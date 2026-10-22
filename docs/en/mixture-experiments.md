@@ -5,9 +5,7 @@ nav_order: 5.6
 
 # DoReMi and RegMix experiments
 
-These commands train real small causal language models and learn mixture weights from losses. The implementation is a single-device,
-from-scratch Transformer adaptation, not a reproduction of the papers' scale or reported benchmark results. Daily pipelines never
-launch these experiments automatically. Large target-model training remains downstream.
+These commands train a small causal Transformer on one device and learn mixture weights from validation losses. Start experiments with `training.mixture_experiments`, then use the exported weights to build a training mixture.
 
 ## 1. Dependencies and data
 
@@ -76,7 +74,7 @@ The command:
 5. Actually trains a confirmation proxy. If it fails to beat the best measured design trial, exports that measured trial instead.
 
 Defaults are 32 design trials and 4096 random search candidates. Trial count must be at least `max(12, domain_count+3)`.
-These are starter settings, not the original paper scale or a statistical guarantee. Outputs include `design.json`, `trial-*.pt/json`,
+Outputs include `design.json`, `trial-*.pt/json`,
 `regressor.txt`, `confirmation.pt/json`, `regression-report.json` and `weights.json`. The report preserves held-out diagnostics,
 the proposal, confirmation loss and final selection rationale.
 Sources: [pinned repository](https://github.com/sail-sg/regmix/tree/dd9d1c3b2d7c1756b1a90f0ad7603068e9856cc6),
@@ -90,12 +88,10 @@ Sources: [pinned repository](https://github.com/sail-sg/regmix/tree/dd9d1c3b2d7c
 - Architecture: small pre-norm causal Transformer, tied input/output embeddings, learned positions, zero dropout and AdamW.
 - `checkpoint_every` defaults to 50 updates. Rerun the same config/output to resume; updates after the last checkpoint are repeated.
 - Experiment identity includes the data manifest, config, implementation version and PyTorch version. Changes require a new directory.
-- Deterministic algorithms are enabled; unsupported device operations fail explicitly. Bitwise equivalence across hardware/library versions is not promised.
+- Deterministic algorithms are enabled; unsupported device operations fail explicitly.
 - Proxy training uses replacement and reports actual target tokens and effective domain epochs. Static exports use no replacement and report shortfalls.
 
-`run.json` records validation block IDs, recipe and method attribution. Held-out RegMix trials measure the regressor's predictive
-ability; validation losses still tune mixtures and are **not untouched final test results**. Improvements on a target model require
-separate downstream training and evaluation.
+`run.json` records validation block IDs, the recipe, and method attribution. Held-out RegMix trials measure the regressor's predictive ability; validation losses select mixture weights.
 
 ## 5. Build the training mixture
 
@@ -107,5 +103,4 @@ python -m training.mixture_cli --config config/mixture-learned.local.json \
   build --output data/training/mixtures/learned-001
 ```
 
-See [Data mixtures and selection](data-mixtures.md) for capacity handling, images and export contracts. The algorithm workflows are
-implemented; this repository does not yet provide real-corpus experiment results or reproduced paper scores for FinFlow.
+See [Data mixtures and selection](data-mixtures.md) for capacity handling, image exports, and data contracts.

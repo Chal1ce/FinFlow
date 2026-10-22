@@ -6,7 +6,6 @@ nav_order: 3
 # Daily data flywheel
 {: .no_toc }
 
-
 Optional extension: the [small-model refiner](text-refiner.md) adds a disabled-by-default CPT branch with `.env` configuration, audit/apply modes and a separate rewrite switch.
 
 ## On this page
@@ -91,7 +90,7 @@ The defaults are `original` and `visual`. To enable more methods:
 "methods": ["original", "visual", "translate", "rewrite"]
 ```
 
-`source_policy` is empty by default: training usage has not been approved.
+`source_policy` maps source names to training admission and allowed methods; it is empty by default.
 After confirming the actual permitted use, configure the source, for example:
 
 ```json
@@ -100,10 +99,7 @@ After confirming the actual permitted use, configure the source, for example:
 }
 ```
 
-Downloading a PDF or finding it through an open-access index does not approve its
-training use. This policy is source-name based and does not automatically resolve
-per-paper permissions. Mixed-license discovery sources require individual checks
-before an appropriate policy can be adopted.
+`source_policy` uses source names as keys. The `training` and `allowed_methods` fields control training admission and candidate methods.
 
 With `require_ocr_pass=true`, OCR warnings hold candidates for review. Original,
 visual, translated, and rewritten candidates are assessed separately. Technical
@@ -272,7 +268,7 @@ n-gram Jaccard report; it does not delete samples and records its coverage limit
 `scripts/run_flywheel.sh` selects the Python environment and appends output to
 `logs/flywheel.log`; `scripts/run_collection.sh` is a compatibility entry point.
 Do not install both the old collector schedule and the flywheel schedule.
-Templates are provided but are not automatically installed.
+Use the cron or launchd templates below to configure scheduling.
 
 The cron template is `ops/fin-doc-flywheel.cron.example`, defaulting to 03:00 in the
 host timezone. Replace its repository path and check the system timezone.
@@ -292,20 +288,7 @@ The template runs at 03:00 and once when loaded. Disable it with:
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.chansn.fin-doc-flywheel.plist"
 ```
 
-macOS uses the system timezone. A powered-off computer or unavailable OCR service
-cannot finish on time; the persistent queue resumes later. Wake-related scheduling
-depends on the operating system.
-
-## 7. Validation status
-
-149 offline tests passed before the public repository migration. They use isolated
-data, synthetic documents, a test tokenizer, and injected model responses. Formal
-CLI publishing does not enable those fake responses. Real discovery/OCR services,
-model authentication, description quality, provider usage, human sampling, and
-scheduler operation still require a configured real run. See the
-[configuration troubleshooting guide](environment-check.md) for preflight and missing fields.
-Long-running logs need system rotation; cumulative scans and evidence snapshots
-will need batching and retention as the dataset grows.
+macOS uses the system timezone. The persistent queue retains unfinished work while the host or OCR service is unavailable and resumes it later.
 
 ## 7. Optional SFT stage
 
@@ -313,4 +296,4 @@ Set `"sft": {"enabled": true, "config": "config/sft.local.json"}` in the local f
 to generate QA, JSON extraction and table-calculation SFT after evidence publication and CPT.
 It is disabled by default and requires separate generation/review role configuration; table review needs vision support.
 Daily summaries expose `sft_dataset`. SFT requests are included in the total count; detailed SFT usage is nested there.
-See [SFT data generation](sft.md) for standalone use, formats and resuming. Functional and live-model validation is pending.
+See [SFT data generation](sft.md) for standalone use, formats and resuming.

@@ -4,7 +4,7 @@
 
 [Chinese documentation](https://chal1ce.github.io/FinFlow/zh/) · [English documentation](https://chal1ce.github.io/FinFlow/en/)
 
-Turn financial documents into traceable pretraining and SFT data.
+A financial multimodal data flywheel and Agentic RL pipeline, from document collection and governance to training data, tool SFT, GRPO, and evaluation.
 
 FinFlow connects source discovery, OCR, text and visual governance, multimodal
 descriptions, optional translation/rewriting, and independent quality review.
@@ -24,6 +24,7 @@ pretraining (CPT).
 - Incremental runs, bounded retries, recovery, deduplication, lineage, immutable releases.
 - Automatic CPT/SFT quality and coverage reports, coverage gaps and version comparisons: [report guide](docs/en/quality-report.md).
 - Persistent cross-version MinHash indexing, duplicate relations and auditable mixture filtering: [near-dedup guide](docs/en/near-dedup.md).
+- Financial agents with table search, reading, Decimal calculations, tool SFT, single-GPU GRPO, and frozen evaluation.
 - Feishu, Telegram, Discord, and Slack commands, PDF imports, human visual review, reports, and MCP tools for assistants.
 
 ```mermaid
@@ -47,7 +48,6 @@ DoReMi/RegMix run explicitly requested small proxy experiments to learn mixtures
 SFT runs independently or as an optional daily stage, disabled by default.
 
 Optional [daily training publication](docs/en/training-publication.md) connects snapshots, near deduplication, mixtures, verification and version publication through one `.env`. SQLite tracks recovery and lineage; failures retain the previous `latest`. Daily reports are available as JSON/Markdown.
-
 
 Optional [small-model refiner](docs/en/text-refiner.md): disabled by default, with audit/apply modes, a separate rewrite switch and a configurable model. Adds reviewed CPT candidates while preserving source evidence, operation lineage and reports.
 
@@ -85,7 +85,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Models, admission, review, retries, lineage, releases | [Daily data flywheel](docs/en/data-flywheel.md) |
 | Messaging apps or OpenClaw / Hermes access | [App integrations and MCP](docs/en/app-integrations.md) · [Telegram](docs/en/app-telegram.md) · [Discord](docs/en/app-discord.md) · [Slack](docs/en/app-slack.md) |
 | Text or visual SFT from v7 evidence | [Text SFT](docs/en/sft.md) · [Visual SFT](docs/en/sft-vision.md) |
-| Financial Agent: prepare without checkpoints, governed table tasks, SFT → GRPO | [Agentic RL guide (Chinese)](agent/trainers/rl/README.md) |
+| Financial Agent: task building, SFT, GRPO, and evaluation | [Agentic RL guide (Chinese)](agent/trainers/rl/README.md) |
 | Generation methods and learned mixtures | [Methods](docs/en/training-methods.md) · [Mixtures](docs/en/data-mixtures.md) · [DoReMi / RegMix](docs/en/mixture-experiments.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
 | Configuration troubleshooting | [Configuration guide](docs/en/environment-check.md) |
@@ -93,19 +93,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Add bilingual pages or images | [Documentation authoring](docs/en/docs-authoring.md) |
 | Publish the website | [GitHub Pages](docs/en/github-pages.md) |
 
-## Project status
-
-149 offline tests passed before the public repository migration. The new application
-integration, SFT and method/mixture code have passed static checks; functional tests and live validation are pending. Real OCR/model
-integration and quality still require configured validation. Scheduler templates
-are not installed automatically. The formal flywheel has no mock fallback;
-unconfirmed source usage or quality issues remain reviewable.
-
-DoReMi/RegMix workflows are algorithm adaptations; FinFlow has no real-corpus proxy results or reproduced paper scores yet.
-
-Financial Agent code now includes synthetic research tasks, executable tools, reference SFT exports, and a single-GPU multi-turn GRPO launcher. GPU training has not been run; visual observations and governance operations environments remain planned.
-
-Development commands:
+## Development
 
 ```sh
 python -m pip install -e '.[dev]'
@@ -113,4 +101,4 @@ python -m pytest -q
 python -m ruff check .
 ```
 
-The [design plan](docs/data-flywheel-plan.md) is currently in Chinese.
+Architecture guides: [Data flywheel](docs/data-flywheel-plan.md) and [Agentic RL](docs/agentic-rl-review.md), in Chinese.

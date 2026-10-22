@@ -47,7 +47,7 @@ FIN_DOC_REFINER_SYSTEM_PROMPT_FILE=
 
 Use an OpenAI Chat Completions-compatible service able to produce the operation protocol below. An unauthenticated local service still needs a nonempty placeholder key for SDK/preflight requirements; authenticated services require their actual key. Pin the model version to a checkpoint/revision.
 
-The default system prompt is FinFlow's own protocol adaptation. `SYSTEM_PROMPT_FILE` optionally loads a UTF-8 system prompt from an absolute path or a project-root-relative path. Its contents, not just its name, participate in the plugin identity. A checkpoint needs the appropriate system prompt, chat template and serving configuration; changing the model name alone is not a paper reproduction.
+The default system prompt is FinFlow's own protocol adaptation. `SYSTEM_PROMPT_FILE` optionally loads a UTF-8 system prompt from an absolute path or a project-root-relative path. Its contents, not just its name, participate in the plugin identity. A checkpoint needs the appropriate system prompt, chat template and serving configuration; configure these together with the model endpoint.
 
 The character limit is not a model token limit. Inputs first use the existing training-tokenizer splitter. Oversized plugin inputs are recorded as skipped, never silently truncated. Configure the server context window to fit the system prompt, numbered source and output allowance. Plugin calls share the daily model-request budget with other flywheel roles.
 
@@ -82,10 +82,8 @@ Out-of-range or overlapping operations, ambiguous substrings, conflicting tags, 
 
 - Segments containing table, formula or image structures are skipped; existing visual processing remains active. Detection combines block types and text markers and still depends on OCR labels.
 - Default heuristic guards check numeric, currency, date-number, common-unit and negation signals. Removing protected content or changing these signals produces `needs_review`. You can disable the heuristic for other domains; independent candidate review still applies.
-- Non-delete results must retain at least 0.5 of the input character count by default. This configurable ratio measures length, not semantic faithfulness.
+- Non-delete results must retain at least 0.5 of the input character count by default. This configurable ratio is calculated from character counts.
 - Sources without approved training use, or inputs failing required OCR quality, do not trigger refiner calls.
-
-These checks do not prove factual correctness. Segment boundaries can lose context, particularly accounting scope, table notes and references. The plugin does not inspect image pixels or automatically fine-tune on Chinese domain data.
 
 ## 4. Lineage, recovery and reporting
 
@@ -99,10 +97,8 @@ Invalid output stays `needs_review` without a candidate. Manual retry reuses an 
 
 Run reports include operation/status counts, candidate count, cached-response reuse and input/output character counts. Skip, invalid and delete are distinct so failure is not reported as cleaning benefit. Provider-reported usage remains grouped by role; no supplier cost estimates are added.
 
-## 5. Attribution and reproduction boundary
+## 5. References
 
 See the [ReScraper paper](https://arxiv.org/abs/2609.34287), [official code](https://github.com/cxcscmu/ReScraper) and [model](https://huggingface.co/cx-cmu/ReScraper). The original method uses a specifically fine-tuned Qwen3-0.6B to jointly extract and refine English web text.
 
-FinFlow independently implements a strict operation adapter as an additional branch over governed financial OCR text. It does not reproduce the original HTML renderer, teacher-data construction, two-stage SFT training or experimental scale. The default prompt is a FinFlow adaptation and does not establish checkpoint quality on Chinese financial text. Alternative models must implement the protocol and use a suitable system prompt. Consult each upstream repository for its license.
-
-This plugin has received static checks only; functional tests and live-model acceptance remain outstanding.
+FinFlow applies the operation protocol to governed financial OCR text. The default prompt implements the FinFlow protocol; configure a matching system prompt and chat template when using another model.

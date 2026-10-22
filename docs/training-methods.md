@@ -64,13 +64,13 @@ python -m training.sft_cli --config config/sft-methods.local.json \
 
 生成使用 `FIN_DOC_SFT_GENERATE_*`，指令筛查及最终审核使用 `FIN_DOC_SFT_REVIEW_*`。
 启用 CodecLM 对比后，目标模型仅接收原始证据和问题；审核模型按量表比较两份回答，
-教师回答仍须通过最终事实审核。评分差是合成数据选择信号，不是模型能力提升的证明。
+评分差用于筛选候选，教师回答继续进入最终事实审核。
 
 每个策略任务保存中间响应、角色、stage 工件、最终样本和审核；样本包含 `strategy`、`strategy_stages`。
 配方哈希包含种子/策略配置和模型身份；引擎升级为 `sft-v3`，导出数据契约仍为 SFT v2。
 原有数据包保持不可变。多步骤任务需要更多模型请求，达到上限时换新的 dataset ID 续作，
 相同配方的响应缓存可复用；累计恢复快照不要直接拼接。
-随机种子固定流程选择，不能保证远端模型逐字确定性；缓存保存实际响应供重放。
+随机种子固定流程选择，响应缓存保存模型输出供重放。
 
 ## 多模态任务扩展
 
@@ -87,6 +87,4 @@ python -m training.sft_cli --config config/sft-methods.local.json \
 
 ## 选择与发布
 
-生成数量不代表最终训练占比。先审核、去重，再使用[数据配比](data-mixtures.md)进行选择。
-[DoReMi / RegMix](mixture-experiments.md)提供真实本地代理训练和配比学习，独立于日常 SFT/API 调用。
-每种方法的来源和适配边界记录在 `training/method_cards.py`，相关 SFT/实验 manifest 会保存方法卡。
+生成结果经过审核、去重后，通过[数据配比](data-mixtures.md)选择训练样本。[DoReMi / RegMix](mixture-experiments.md)使用本地代理训练学习配比。方法来源记录在 `training/method_cards.py`，SFT 和实验 manifest 保存对应方法卡。

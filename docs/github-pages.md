@@ -74,4 +74,4 @@ python3 scripts/prepare_docs.py --finalize
   重新构建并上传产物。若仍失败，再检查 GitHub Actions/Pages 服务状态和产物是否被删除。
 - 404 时先确认 `deploy` 已成功；路径 `FinFlow` 大小写需要一致。
 
-提交工作流不等于网站已经发布。首次部署结果以 Actions 和 Pages 设置为准。
+在 Actions 中查看 Documentation 的 build 与 deploy 结果。

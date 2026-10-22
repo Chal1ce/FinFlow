@@ -6,7 +6,6 @@ permalink: /
 
 # 金融文档治理与训练数据
 
-
 把金融文档转成可追溯的预训练与 SFT 数据：从来源采集、OCR 和图表治理，到模型处理、独立审核与语料发布。
 
 ![处理流程概览](assets/images/pipeline-overview.svg)
@@ -56,7 +55,6 @@ permalink: /
 - [命令与参数参考](cli-reference.md)：独立入口的详细参数。
 - [环境模板](https://github.com/Chal1ce/FinFlow/blob/main/.env.example) · [来源配置](https://github.com/Chal1ce/FinFlow/blob/main/config/collection.json) · [飞轮配方](https://github.com/Chal1ce/FinFlow/blob/main/config/flywheel.json)。
 
-
 - [可选小模型精炼插件](text-refiner.md)：开关、模型选择、操作协议、审核与恢复。
 
 ### 处理与数据格式
@@ -71,7 +69,7 @@ permalink: /
 - [本地运行与运维](local_operations.md)：观察状态、校验交付、人工复核、备份与恢复。
 - [运行日志与排错](logging.md)：日志格式、级别与轮转配置。
 - [环境配置排查](environment-check.md)：配置预检、常见缺项与处理方法。
-- [数据飞轮计划](data-flywheel-plan.md)：设计背景、实施范围与阶段划分。
+- [数据飞轮架构](data-flywheel-plan.md)：处理链路、模块职责与数据发布。
 - [编写文档与添加图片](docs-authoring.md)：图片路径、导航和页面写法。
 - [GitHub Pages 发布说明](github-pages.md)：首次启用、日常更新和部署排错。
 

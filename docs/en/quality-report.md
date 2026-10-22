@@ -55,6 +55,6 @@ The flywheel automatically reports each newly produced CPT and optional SFT pack
 `data/reports/training/<run_id>/cpt/` and `sft/`. Daily JSON includes paths and metrics in `quality_reports`.
 Missing packages are `not_available`. Report failures mark the run `partial`, record the error type and retain published training data.
 Daily CPT is usually a delta; SFT is a snapshot for the selected evidence and recipe. Do not add their counts as daily new samples.
-A successfully generated report does not certify factual quality; inspect its `warnings` too.
+`warnings` summarizes data quality findings.
 
 Quality reports also support final mixture packages. [Daily training publication](training-publication.md) includes coverage targets, previous-version comparisons and mixture shortfalls; calendar-day JSON/Markdown lives under `reports/daily/`.

@@ -15,7 +15,7 @@ currently maintained in Chinese; the links explicitly open the Chinese edition:
 - [Operations, recovery, and review](https://chal1ce.github.io/FinFlow/zh/local_operations.html).
 - [Logging](https://chal1ce.github.io/FinFlow/zh/logging.html).
 - [CLI and parameter reference](https://chal1ce.github.io/FinFlow/zh/cli-reference.html).
-- [Flywheel design plan](https://chal1ce.github.io/FinFlow/zh/data-flywheel-plan.html).
+- [Data flywheel architecture](https://chal1ce.github.io/FinFlow/zh/data-flywheel-plan.html).
 
 Configuration source files:
 [environment template](https://github.com/Chal1ce/FinFlow/blob/main/.env.example),

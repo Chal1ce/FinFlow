@@ -13,7 +13,6 @@ parent: 数据处理
 1. TOC
 {:toc}
 
-
 [文档首页](index.md) · [项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
 本页说明 `workflow.cli` 的手工财报路径及 v5/v6 交付格式。这些路径的 OCR 告警不阻断本地交付；[每日飞轮](data-flywheel.md)的训练准入和审核规则另行执行。

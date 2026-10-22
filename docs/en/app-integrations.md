@@ -18,10 +18,7 @@ Native channels accept fixed commands; external assistants handle natural langua
 | Slack | Socket Mode | `!status` | [Slack](app-slack.md) |
 | OpenClaw / Hermes and others | Local MCP stdio | `finflow_status` | Section 4 below |
 
-All four messaging channels support PDFs, original evidence files, human review commands, and reports.
-Channels default to disabled and require their own credentials, bot identity, and user allowlist.
-Feishu cloud documents, Bitable, and remote HTTP MCP are not implemented.
-Static checks are complete; functional tests and live channel/client validation remain pending.
+All four messaging channels support PDFs, original evidence files, human review commands, and reports. Channels default to disabled and require credentials, a bot identity, and user allowlists.
 
 ```mermaid
 flowchart LR
@@ -241,9 +238,7 @@ mcp_servers:
     enabled: true
 ```
 
-Configuration reference: [Hermes MCP](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/).
-Restart/reload the client, then ask it to inspect today's FinFlow status. These are standard MCP
-configurations; neither assistant has been connected for live acceptance testing in this implementation session.
+Configuration reference: [Hermes MCP](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/). Restart or reload the client, then ask it to inspect today's FinFlow status.
 
 ### Optional mutations
 
@@ -300,12 +295,7 @@ Jobs wait when a scheduled run holds that lock. After a process dies, abandoned 
 become `interrupted`. Inspect their underlying effects before explicitly retrying them.
 Submitted reviews are not automatically retried; request fresh evidence and inspect the latest decision.
 
-Inbox/outbox failures back off and stop after five attempts. Outbound stages checkpoint message
-receipts and use Feishu message UUIDs to help deduplicate retries. Network/process interruptions
-can still produce duplicate notifications; exactly-once delivery is not guaranteed.
-The new channels also persist receipts and respect available rate-limit delays. Telegram commits
-events and its polling cursor together; Slack persists before acknowledging events. Discord does
-not fetch offline history after a cold restart: messages not yet in the inbox must be resent.
+Inbox and outbox failures back off and stop after five attempts. Send receipts and Feishu message UUIDs support retry deduplication; retrying a send whose receipt was not saved can produce a duplicate. Telegram persists events before advancing its polling cursor, and Slack persists before acknowledging events. After a Discord cold restart, resend offline commands that were not stored in the inbox.
 
 Recover failed notifications after fixing credentials, permissions, or connectivity:
 
@@ -329,7 +319,4 @@ before backing up the complete data directory, including databases and local evi
 - `integrations/mcp_server.py`: read-only default and optional mutation tools.
 - `integrations/cli.py`: command entry point.
 
-The implementation adopts adapter, shared-tool, queue, and outbox patterns without copying
-OpenClaw/Hermes source or depending on their agent runtimes. Future channels should authenticate
-platform identities before calling the same service and preserve roles, deduplication, provenance,
-and delivery receipts.
+New channels connect through the shared service and channel registry, providing platform identity checks, role mapping, message deduplication, and send receipts.

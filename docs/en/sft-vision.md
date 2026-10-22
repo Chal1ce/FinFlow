@@ -37,7 +37,7 @@ FIN_DOC_SFT_VISION_REVIEW_MODEL=YOUR_VISION_REVIEWER
 
 A visual-only recipe does not require the text `FIN_DOC_SFT_GENERATE_*` / `FIN_DOC_SFT_REVIEW_*` roles.
 Mixed recipes also require the corresponding text roles. Preflight checks local configuration;
-it does not establish actual provider image support.
+configure both model roles with image support.
 
 ```sh
 python -m training.sft_cli --config config/sft-vision.local.json preflight
@@ -73,8 +73,7 @@ all five text/vision tasks.
 
 Settings: `max_table_rows`, `max_table_columns`, `max_table_cells`, `max_image_bytes`, `max_image_pixels`.
 Question/answer character limits also apply. Exclude large tables or adjust the recipe if complete output
-cannot fit the model limit; do not concatenate truncated responses. Region and visual-fact correctness
-still rely on model review and human sampling. Images are packaged verbatim without automatic privacy masking.
+cannot fit the model limit; do not concatenate truncated responses. The independent visual reviewer checks regions and image facts. Images are packaged verbatim.
 
 ## Portable exports and loading
 
@@ -93,7 +92,7 @@ The manifest adds modality counts, image count and export file names.
 Moving the entire dataset directory preserves training image references; complete historical audits still require
 the original data directory.
 
-Illustrative structure; the hash and answer below are placeholders, not a generated example:
+Example record structure:
 
 ```json
 {
@@ -122,8 +121,7 @@ for example in records:
 
 The message structure follows [TRL's vision data format](https://huggingface.co/docs/trl/main/en/dataset_formats#vision-datasets):
 typed content with a separate image list. Configure the target model's processor, chat template, image tokens
-and batching in the downstream trainer. No training-framework integration is claimed to have been validated;
-this feature does not launch training.
+and batching in the downstream trainer. See the [SFT launcher](https://github.com/Chal1ce/FinFlow/blob/main/agent/trainers/sft/README.md) for training.
 
 ## Verification, splits and versioning
 
@@ -143,12 +141,6 @@ Sample identity includes image hashes, so identical questions on different image
 The engine is now `sft-v2`, producing a new recipe identity. Use a new dataset ID when generating.
 Old exports and audits remain unchanged; identical model requests may still reuse response caches.
 New text/vision exports remain cumulative snapshots, so successive resume snapshots must not be concatenated directly.
-
-## Current status
-
-Visual generation, original-image review, region metadata, portable image exports, PIL loading and extended
-verification are implemented. Functional tests, real-model acceptance and downstream VLM training have not run.
-No live or paid model requests were made during implementation.
 
 ## Descriptions and conversations
 

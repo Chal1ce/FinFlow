@@ -49,9 +49,7 @@ SFT 使用 `config/mixture-sft.json`，可合并文本/视觉包；重复的累�
 
 这是说明格式的示例比例。`weights` 必须覆盖实际训练池的全部组，可以显式填 0；先运行温度模式的 plan 查看组名。
 
-温度模式采用 `p_i = n_i^alpha / sum(n_j^alpha)`：`alpha=1` 保持规模比例，
-`alpha=0.5` 提升小组占比，`alpha=0` 对非空组均匀分配。参考 [XLM 实现](https://github.com/facebookresearch/XLM/blob/main/xlm/utils.py)。
-这里的 n 根据 `unit` 使用 token 数或样本数，不代表质量评分。
+温度模式采用 `p_i = n_i^alpha / sum(n_j^alpha)`：`alpha=1` 保持规模比例，`alpha=0.5` 提升小组占比，`alpha=0` 对非空组均匀分配。`n_i` 按 `unit` 使用 token 数或样本数。参考 [XLM 实现](https://github.com/facebookresearch/XLM/blob/main/xlm/utils.py)。
 
 CPT 的 token 数沿用已冻结的目标 tokenizer，token 配比要求全部输入使用相同 tokenizer 配方。
 没有截断样本来凑配额：预算、完整样本长度、家族上限和多样性筛选可能导致短缺。

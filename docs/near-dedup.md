@@ -6,9 +6,8 @@ nav_order: 10.6
 # 跨版本近似去重
 
 本地 SQLite 持久索引帮助比较历史与新增 CPT/SFT 数据。使用确定性的字符 MinHash/LSH 召回候选，
-再计算哈希字符片段集合的 Jaccard 相似度；默认阈值 0.9。这是词面近似检测，不判断事实等价或语义重复。
-不调用模型、下载权重，也不改原始发布包。可参考 [DataTrove 的 MinHash 分阶段流程](https://github.com/huggingface/datatrove/blob/main/examples/minhash_deduplication.py)；
-本项目是独立的轻量实现，不使用其分布式执行器或声称与其指纹兼容。
+再计算哈希字符片段集合的 Jaccard 相似度；默认阈值 0.9。
+流程参考：[DataTrove MinHash](https://github.com/huggingface/datatrove/blob/main/examples/minhash_deduplication.py)。
 
 ## 1. 按版本追加索引
 
@@ -46,7 +45,7 @@ python -m training.near_dedup_cli --index data/indexes/cpt-near.sqlite \
 按首次入库顺序保留当前池中最早的直接匹配样本，同一批按稳定内容 ID 排序。
 不会沿 A≈B、B≈C 就直接认定 A≈C。只在同一 split 内比较；validation 全量保留。
 历史匹配若不在本次输入池，仅记关系，不排除当前样本。需要跨版本实际过滤时，把相应历史包纳入 scan 和后续配比的 inputs。
-原样本的来源不会伪装成保留对象的精确来源；近似关联独立保存在报告中。
+近似关联独立保存在报告中，各样本保留原来源。
 
 ## 3. 接入配比构建
 
@@ -67,9 +66,8 @@ validation 保留。配比包携带 `near-dedup/` 冻结报告，后续不依赖
 ## 保守规则与边界
 
 - NFKC、大小写和空白归一化后比较。短于 `min_chars`（默认80字符）仅检测归一化后完全相同的文本。
-- 数字序列及内置单位序列不同不自动合并；这是保守保护，不代表金融事实一致性校验。中文数词及未列举单位仍需业务规则补充。
+- 数字序列及内置单位序列不同不自动合并；内置规则比较数字和单位序列，可按领域扩展。
 - CPT 按 tokenizer 身份隔离。SFT 按任务、system、证据上下文及原图哈希隔离，再比较问答文本，避免相同材料掩盖不同任务。
 - 当前 SFT 使用 FinFlow 的材料/任务格式拆分上下文；多模态只对相同原图下的文本去重，不做图片感知哈希。
-- LSH 是概率召回，可能漏掉近似对；相似度基于哈希片段集合，不能宣称全量语义去重。
+- LSH 是概率召回，可能漏掉近似对；相似度基于哈希片段集合。
 - 超过 `max_candidates` 或 `max_chars` 时退出2，不截断后发布“成功”结果。扫描当前池和关系保存在内存，超大语料需要分批或扩展流式执行。
-- 不增加独立测试集或污染检查；下游可根据业务自行扩展。

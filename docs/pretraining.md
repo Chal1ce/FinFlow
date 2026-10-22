@@ -13,7 +13,6 @@ parent: 预训练数据
 1. TOC
 {:toc}
 
-
 [文档首页](index.md) · [项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
 本页对应 `training.cli` 和 v5/v6 发布包。**每日飞轮的 v7 发布、目标 tokenizer、图表描述及翻译/改写候选使用[飞轮运行说明](data-flywheel.md#5-发布与训练数据)**，两套入口的审核与分段策略不同。
@@ -54,4 +53,4 @@ python -m training.cli --data-root data build-pretrain `
 
 发布格式 `financial-document-delivery-v6` 提供完整正文快照，来源保真度标记为 `full_governed_document`。旧的、已校验 `v5` 包仍可使用，但只能按 `chunks.jsonl` 重组，数据集会明确标记 `lossy_chunk_reconstruction`。构建器保留 OCR `needs_review` 文档，不把质量告警拼入正文，质量信号仅保存在 `provenance.jsonl` 和 `manifest.json`。
 
-这类数据集固定标记 `usage_scope=internal-only`、`rights_status=unknown`。确定性规则只替换电子邮箱为 `<EMAIL>`、中国大陆手机和常见固话为 `<PHONE>`；这不是版权、隐私或业务合规审查的替代品，训练前仍须确认来源授权和适用范围。
+这类数据集固定标记 `usage_scope=internal-only`、`rights_status=unknown`。确定性规则只替换电子邮箱为 `<EMAIL>`、中国大陆手机和常见固话为 `<PHONE>`；脱敏计数写入 provenance。

@@ -13,9 +13,7 @@ FinFlow 可从本机已校验的 v7 证据发布包生成三类中文文本 SFT�
 | `extraction` | 审核通过的原文片段 | JSON 字段抽取；字段值必须直接出现在引用证据中 |
 | `table_calculation` | 已通过图表候选审核的表格 OCR、上下文与原图 | 两个操作数的计算；程序重算，审核模型对照原图核对取数与单位 |
 
-本页介绍**文本 SFT**：训练输入包含材料和问题，不包含图片；表格原图仅用于审核。
-另有可选的[图表多模态 SFT](sft-vision.md)，训练样本包含原图。偏好对、检索负例、多轮对话和模型训练尚未实现。
-不把图表模型描述、翻译或改写当作新的事实依据。
+文本 SFT 的训练输入包含材料和问题，表格原图用于审核。[图表多模态 SFT](sft-vision.md) 将原图加入训练输入。模型训练使用[单卡 SFT 入口](https://github.com/Chal1ce/FinFlow/blob/main/agent/trainers/sft/README.md)。
 
 ## 1. 配置模型
 
@@ -84,7 +82,6 @@ python -m training.sft_cli \
 - `validation_fraction`：首次分配比例；已冻结或已由 CPT 分配的文档保持原划分。
 - `generation_prompt_version`、`review_prompt_version`：提示词修订标识。
 
-这些是工作量和长度限制，不包含供应商价格表或货币预算。
 导出保持完整 `messages`，目标训练程序负责 tokenizer、chat template、长度检查和 packing。
 
 表格计算首版只支持同单位的两个操作数：
@@ -97,9 +94,7 @@ python -m training.sft_cli \
 | `percentage` | a / b × 100% |
 | `growth_rate` | (a − b) / b × 100%，要求 b > 0 |
 
-金额数值必须能在精确引文中找到，单位也须有原文引文。程序使用 Decimal 和四舍五入，支持 0–6 位小数，
-不执行模型生成的代码、不做单位换算、不处理百分数操作数。行列含义、报告期与口径仍依赖审核，
-程序算对不代表取数正确。
+金额与单位通过精确引文关联到原文。程序使用 Decimal 和四舍五入，支持 0–6 位小数；操作数为同单位金额数值。审核模型对照表格核对行列含义、报告期、口径与取数。
 
 ## 4. 输出、审核与血缘
 
@@ -116,7 +111,7 @@ python -m training.sft_cli \
 | `manifest.json`、`checksums.sha256` | 配方、模型身份、输入发布包、数量、状态、完整性摘要 |
 
 文本训练文件中每条样本为三条消息：`system`、含材料和任务的 `user`、`assistant`。
-`sample_id` 是元数据，不应拼到提示词中。数据是合成样本，自动审核不等于人工验证；上线训练前仍需抽查。
+`sample_id` 保存为元数据，训练输入使用 `messages`。
 
 ```sh
 python -m training.sft_cli verify data/training/sft/datasets/sft-001
@@ -140,8 +135,7 @@ python -m workflow.flywheel_cli --data-root data trace --sample-id YOUR_SFT_SAMP
 
 划分在生成前持久化：沿用已有 CPT 的 work 划分；完全相同上下文、相同图片字节与同一 work 的派生内容保持一致。
 新的 CPT 构建也会读取该划分。历史数据冲突时排除相关 SFT 证据，记录 `split_conflict`。
-本版只有 train/validation，不创建独立测试集；验证集可能参与配方调优，不能当作最终盲测。
-该策略不自动识别所有语义近重复、跨公司转载或未建立身份关联的修订文档。
+导出使用 train/validation 两个划分，按逻辑作品、相同上下文和图片字节分组。
 
 ## 6. 每日自动生成
 
@@ -161,12 +155,7 @@ python -m workflow.flywheel_cli --config config/flywheel.local.json run
 SFT 在证据发布与 CPT 构建后执行，使用剩余飞轮时间和独立的 SFT 请求上限。
 没有待生成工作时复用缓存；每日摘要和聊天渠道日报增加 `sft_dataset`。
 SFT 失败会令本轮状态为 `partial`，已发布的 CPT 数据保留。
-默认 `enabled=false`，添加该功能不会自动安装调度或调用模型。
-
-## 实现状态
-
-实现了第一阶段三类文本 SFT、缓存续作、程序计算、独立审核、共享划分和工件血缘。
-静态检查与文档构建检查不代表功能测试或真实模型验收；当前新增 SFT 尚未进行这些验收。
+默认 `enabled=false`，设置为 `true` 后接入每日生成。
 
 ## 更多生成策略
 

@@ -62,9 +62,7 @@ Sources: [Self-Instruct](https://github.com/yizhongw/self-instruct), [Evol-Instr
 - `contrastive_filter`: false by default; true requires `codeclm` and `FIN_DOC_SFT_TARGET_*`.
 - `contrastive_min_gap`: integer teacher-minus-target rubric score gap, 1–5, default 1.
 
-Generation uses `FIN_DOC_SFT_GENERATE_*`; instruction screening and final review use `FIN_DOC_SFT_REVIEW_*`.
-For contrastive filtering, the target receives only source evidence and the question. The reviewer scores both answers against
-the rubric; the teacher answer still requires final factual review. Score gaps are selection signals, not proof of downstream improvement.
+Generation uses `FIN_DOC_SFT_GENERATE_*`; instruction screening and final review use `FIN_DOC_SFT_REVIEW_*`. For contrastive filtering, the target receives source evidence and the question. The reviewer scores both answers against the rubric and uses the score gap to select candidates for final factual review.
 
 Jobs retain intermediate responses, stage artifacts, model roles and final review. Samples expose `strategy` and `strategy_stages`.
 Recipe identities include strategy/seed settings and model identities; the engine is now `sft-v3`, while export contracts remain SFT v2.

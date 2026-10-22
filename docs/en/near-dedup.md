@@ -7,9 +7,7 @@ nav_order: 10.6
 
 A persistent local SQLite index compares historical and new CPT/SFT packages. Deterministic character MinHash/LSH
 retrieves candidates; hashed shingle Jaccard confirms matches at a default threshold of 0.9.
-This detects lexical similarity, not factual or semantic equivalence. No model calls, downloads or source-package edits.
-See [DataTrove's staged MinHash workflow](https://github.com/huggingface/datatrove/blob/main/examples/minhash_deduplication.py)
-for background. FinFlow implements an independent local pipeline, without distributed execution or compatible signatures.
+Workflow reference: [DataTrove MinHash](https://github.com/huggingface/datatrove/blob/main/examples/minhash_deduplication.py).
 
 ## 1. Append versions to the index
 
@@ -45,7 +43,7 @@ Jaccard, history-only flag, matched origins), `origins.jsonl` (all current origi
 The earliest indexed direct match in the current pool becomes the representative. A batch orders records by stable content ID.
 A≈B and B≈C does not imply A≈C. Matching stays within each split, and validation records are all retained.
 Matches absent from the selected pool are report-only. Include historical packages in both scan and mixture inputs to actually filter across versions.
-Approximate relationships remain separate from exact provenance; excluded origins are never relabeled as exact origins of the representative.
+Approximate relationships are stored separately; each sample retains its provenance.
 
 ## 3. Apply during mixture construction
 
@@ -67,7 +65,7 @@ Without `near_dedup_report`, mixture behavior is unchanged.
 ## Conservative rules and limits
 
 - Normalize NFKC, case and whitespace. Text shorter than `min_chars` (default 80) only matches normalized exact text.
-- Different numeric sequences or built-in unit sequences prevent automatic merging. This is not factual validation; extend rules for Chinese number words or other units.
+- Different numeric sequences or built-in unit sequences prevent automatic merging. Extend the numeric and unit rules for additional domain formats.
 - CPT is partitioned by tokenizer identity. SFT is partitioned by task, system prompt, evidence context and original image hashes before comparing question/answer text.
 - Context extraction recognizes FinFlow's material/task format. Visual samples only compare text attached to the same image; no perceptual image hashing.
 - LSH may miss pairs. Hashed shingle similarity is not exhaustive semantic deduplication.

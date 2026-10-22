@@ -2,7 +2,7 @@
 
 面向单张 4090D 的首轮配方：`Qwen/Qwen3.5-0.8B`、BF16 LoRA、rank 8、batch 1、梯度累积 8、长度 2048，默认训练 100 步。直接使用已有 SFT 导出，不重跑数据治理、OCR 或教师审核。
 
-Qwen 官方提供 [Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B)；ms-swift 的[模型支持表](https://swift.readthedocs.io/en/latest/Instruction/Supported-models-and-datasets.html)包含该型号，参数参考其 [Qwen3.5 微调说明](https://swift.readthedocs.io/en/latest/BestPractices/Qwen3_8-Best-Practice.html)。本配方尚未在用户 GPU 上实跑，不预设吞吐或训练收益。
+模型：[Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B)。框架配置参考 ms-swift 的[模型支持表](https://swift.readthedocs.io/en/latest/Instruction/Supported-models-and-datasets.html)和[Qwen3.5 微调说明](https://swift.readthedocs.io/en/latest/BestPractices/Qwen3_8-Best-Practice.html)。
 
 ## 启动
 
@@ -16,7 +16,7 @@ python -m agent.cli sft \
   --output data/agent/checkpoints/qwen3.5-0.8b-sft-001
 ```
 
-`--dataset` 是现有 `training.sft_cli build` 产出的数据集目录，包含 `train.jsonl` 和/或 `train.vision.jsonl`，以及视觉样本引用的 `images/`。它不是 OCR 输出目录，也不是 `import-assets` 的资产清单。
+`--dataset` 是现有 `training.sft_cli build` 产出的数据集目录，包含 `train.jsonl` 和/或 `train.vision.jsonl`，以及视觉样本引用的 `images/`。
 
 默认合并文本与视觉样本。可用 `--modality text` 或 `--modality vision` 选择已有样本；`--max-steps` 调整更新步数；`--max-samples` 限制输入条数；`--model` 可指定本地模型目录。已有验证集会直接复用，不重新划分。
 
@@ -30,4 +30,4 @@ python -m agent.cli sft \
 
 复跑使用新输出目录；继续已有训练时，保持模型/数据/配方一致并加 `--resume-from-checkpoint` 指向实际 checkpoint 目录。若只想生成输入和命令，可以使用 `--prepare-only` 和单独的输出目录。
 
-该入口完成普通文本/视觉 SFT，也可直接消费 `rl-sft` 导出的 Agent 工具轨迹（含多变体/拒绝采样数据）。RL 环境、奖励与多轮 GRPO 入口见 [RL 指南](../rl/README.md)；视觉环境与 operations 环境继续开发。
+该入口完成普通文本/视觉 SFT，也可直接消费 `rl-sft` 导出的 Agent 工具轨迹（含多变体/拒绝采样数据）。RL 环境、奖励与多轮 GRPO 入口见 [RL 指南](../rl/README.md)。

@@ -73,8 +73,6 @@ python -m integrations.cli --config config/integrations.local.json telegram
 - 本机附件默认上限 32 MiB；Telegram 云端 Bot API 的下载上限为 20 MB，实际还受平台限制。[官方文件限制](https://core.telegram.org/bots/api#file)
 - 本版本固定使用 Telegram 官方云端地址，未接入自建 Bot API Server。较大 PDF 使用本机 `import-pdf` 导入。
 - 仅处理新的普通消息，忽略机器人消息、匿名群发送者、编辑消息和频道广播。
-- 消息和轮询位置在同一数据库事务中保存，重启后从已持久化位置继续；平台仍有消息保留期限，长期离线不能保证补全。
+- 消息和轮询位置在同一数据库事务中保存，重启后从已持久化位置继续；平台保留期之外的消息需要重新发送。
 - 发送没有严格一次保证，网络中断可能出现重复通知；已确认的发送阶段保留回执。
 - `app-telegram` 默认未批准训练用途，按通用来源策略确认后再启用生成与发布。
-
-目前完成静态检查；真实账号收发与完整功能联调尚待配置后执行。

@@ -72,5 +72,3 @@ separate messages. Candidate replies contain the original image file, full JSON,
 - Gateway reconnects, but cold startup does not fetch message history. Resend commands missed during downtime or before durable inbox storage. Persisted jobs remain recoverable.
 - Receipts persist successful stages; Discord nonces help deduplicate recent sends, without guaranteeing exactly-once delivery.
 - `app-discord` defaults to unapproved training use. There are no native review buttons; use `!review`.
-
-Static checks are complete; real bot operation and functional validation remain pending.

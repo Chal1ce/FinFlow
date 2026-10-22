@@ -1,6 +1,6 @@
 # 复用现有治理资产
 
-Agent 与视觉 SFT 共用 `training/sft_evidence.py` 的 `EvidenceLoader`，直接读取已有 v7 证据包和当前候选决定，继承图片、页/block、来源与血缘。已有审核结论直接使用；新功能按实际报错和 bad case 迭代。
+Agent 与视觉 SFT 共用 `training/sft_evidence.py` 的 `EvidenceLoader`，直接读取已有 v7 证据包和当前候选决定，继承图片、页/block、来源与血缘。导入器沿用已有审核结论。
 
 ```sh
 python -m agent.cli import-assets \
@@ -20,4 +20,4 @@ python -m agent.cli import-assets \
 
 该命令直接承接现有治理结果，不调用 OCR、教师或审核模型，不创建新的人工审核队列。它是资产适配接口；问答、Agent episode 与模型训练由相应生成器使用这些资产构建。
 
-[OCR inventory](inventory.md) 保留为旧产物的可选诊断工具，其保守标记不能代替或推翻上游治理决定。
+[OCR inventory](inventory.md) 保留为旧产物的可选诊断工具，用于检查文件与 OCR 映射。

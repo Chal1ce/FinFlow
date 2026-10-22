@@ -31,16 +31,16 @@ python -m training.quality_report \
 - SFT 不估算监督 token；需在后续训练 tokenizer、聊天模板和 loss mask 固定后统计。
 - 报告中的语言来自来源元数据，不能据此断言翻译后正文的语言。
 - 审计条目统计状态与 reason 字段，不输出自由文本审核解释。审计条目可能重复且不包含统一候选分母，因此通过率为 `null`。
-- 包内检查相同内容、逻辑 work、图片跨 split；不声称完成语义去重、独立测试集污染检查或事实正确性评测。
+- 检查包内相同内容、逻辑 work 和图片是否跨 split。
 - 报告保留内容哈希用于版本比较，不复制样本正文或模型响应。
 
 ## 版本对比与覆盖缺口
 
 `--baseline` 接受之前生成并通过校验的报告目录。只有类型、统计范围、tokenizer 身份相同才能比较；
 禁止把当天增量当作累计快照比较。记录新增、移除、保留内容数，划分变更，指标和覆盖桶差值。
-配方变化会单独标记；token 差值不等于模型质量提升。
+配方变化单独标记。
 
-`--targets` 接受 JSON 数组，配置每个维度标签的最低样本数。样例仅演示配置，不代表推荐训练比例：
+`--targets` 接受 JSON 数组，配置每个维度标签的最低样本数。配置示例：
 
 ```json
 [{"field":"task","label":"table_calculation","min_samples":100}]
@@ -55,6 +55,6 @@ python -m training.quality_report \
 `data/reports/training/<run_id>/cpt/` 和 `sft/`。日报 JSON 的 `quality_reports` 给出路径和关键指标。
 未产生数据包时记为 `not_available`；报告失败会使运行标为 `partial` 并记录错误类型，已发布数据保留。
 每日 CPT 通常是增量，SFT 是当前选定证据/配方的快照，两者不能直接累加成“今日新增样本”。
-报告本身成功并不代表样本通过事实验收；请同时检查 `warnings`。
+`warnings` 汇总数据质量提示。
 
 最终配比包也支持质量报告。启用[每日训练版本发布](training-publication.md)后，版本中自带覆盖目标、上一版对比和配比缺口；按日 JSON/Markdown 另保存在 `reports/daily/`。

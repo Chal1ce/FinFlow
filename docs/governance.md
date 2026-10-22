@@ -13,7 +13,6 @@ parent: 数据处理
 1. TOC
 {:toc}
 
-
 [文档首页](index.md) · [项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
 本页对应独立 `processing.governance_runner`。其中 `mock` 可供本地练习；正式[每日飞轮](data-flywheel.md)不会回退到 mock。
@@ -33,7 +32,7 @@ data/
 └── state/pipeline.db
 ```
 
-执行一次治理（默认无 LLM Key 时使用确定性 mock，不影响结果可复现）：
+执行一次治理（未配置 LLM Key 时使用确定性 mock）：
 
 ```bash
 python -m processing.governance_runner --config config/collection.json
@@ -72,7 +71,7 @@ python -m processing.governance_runner --config config/collection.json --llm-bac
 
 LLM 当前负责含表格文档的元数据补全/摘要/主题/质量评分，以及对表格和 chunk 上下文做语义增强；清洗、切片和基础 QC 都不依赖 LLM。治理器会把本地 `result.json` 的表格块，以及官方云端 `pages/page_*.md` / `output.md` 内的 HTML 或 Markdown 表格，统一识别为独立 table chunk。一次治理运行内，表格摘要先生成，再提供给文档级总结和 chunk 上下文补全使用。没有表格的文档会完全跳过 LLM，不发送任何模型请求，只保留规则治理结果和确定性的标题上下文。`.env` 中的 `FIN_DOC_DROP_BLOCK_LABELS`、`FIN_DOC_CHUNK_MAX_CHARS`、`FIN_DOC_CHUNK_MIN_CHARS` 可以调整规则。
 
-LLM 增强不会覆盖 chunk 的原始规范化 `text`。表格 chunk 会新增 `table` 字段保存表格自然语言摘要；`table_source` 和 `table_status` 记录摘要来源。显式选择 `openai`（或 `auto` 且配置了 Key）时，任一 LLM 请求、响应格式或内容校验失败都会使当前文档和本次治理运行标记为失败，绝不降级为本地兜底结果。错误会写入终端日志、`data/runs/*-governance.json`、SQLite 的 `pipeline_step.error_msg`，并使命令返回非零退出码；失败文档不会写入新的 `.complete` 标记。`mock` 和 `none` 仍是显式的本地确定性模式。
+LLM 增强保留 chunk 的规范化 `text`，将表格自然语言摘要写入 `table`，并通过 `table_source`、`table_status` 记录来源与状态。执行结果写入运行摘要和 SQLite 步骤记录；模型角色、重试与续跑说明见[每日数据飞轮](data-flywheel.md)。`mock` 和 `none` 可用于本地确定性处理。
 
 每个 LLM 派生 chunk 还记录 `llm_enrichment_uid`、`llm_model_version` 和 `llm_prompt_version`。`chunk_id`、`chunk_version_uid` 仍由原始治理内容决定，不会因摘要文本变化而改变；LLM 结果独立登记在 `llm_governance` 和 `artifact` 中。
 

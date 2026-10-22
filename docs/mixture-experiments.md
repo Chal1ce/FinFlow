@@ -6,8 +6,7 @@ nav_order: 5.6
 # DoReMi 与 RegMix 配比实验
 
 这里会执行真实的小型因果语言模型训练，以验证损失学习数据配比。
-代码是单设备、从零初始化的小型 Transformer 适配版，未复现原论文的模型规模或报告成绩。
-日常飞轮不会自动启动这些实验；大型目标模型的训练仍交给下游训练程序。
+代理模型为单设备、从零初始化的小型 Transformer；实验通过下方命令独立运行。
 
 ## 1. 依赖和数据准备
 
@@ -76,7 +75,6 @@ python -m training.mixture_experiments --config config/mixture-experiment.local.
 5. 对建议方案执行真实确认训练；若没有胜过已测最佳配方，则导出已测最佳配方。
 
 默认 32 个设计试验、4096 个随机搜索候选。试验数至少为 `max(12, 域数+3)`；
-这些是入门配置，不代表原论文规模或足够的统计稳定性。
 输出 `design.json`、`trial-*.pt/json`、`regressor.txt`、`confirmation.pt/json`、
 `regression-report.json` 和 `weights.json`。回归报告包含留出误差、候选建议、确认损失和最终选择依据。
 实现依据：[官方仓库](https://github.com/sail-sg/regmix/tree/dd9d1c3b2d7c1756b1a90f0ad7603068e9856cc6)、
@@ -90,11 +88,10 @@ python -m training.mixture_experiments --config config/mixture-experiment.local.
 - 代理模型为小型 pre-norm 因果 Transformer，共享输入/输出词嵌入、学习位置嵌入、dropout=0、AdamW。
 - `checkpoint_every` 控制保存周期，默认 50 步。中断后重跑完全相同的配置和 output；最近检查点之后的步骤会重做。
 - 实验身份绑定数据 manifest、配置、实现版本和 PyTorch 版本；改变这些条件应使用新输出目录。
-- 启用确定性算法，不支持的设备算子会报错；不同硬件/库版本不承诺逐位一致。
+- 启用确定性算法，不支持的设备算子会报错。
 - 代理训练有放回抽样，结果报告实际 token 数和每域等效 epoch。静态训练包导出无放回，容量不足时会报告。
 
-`run.json` 记录固定验证块、配方与方法卡。RegMix 的留出试验用于检查回归器预测能力；
-所有验证损失仍用于配比调优，**不是独立最终测试成绩**。真实目标模型上是否提升，需要另做下游训练评估。
+`run.json` 记录固定验证块、配方与方法卡。RegMix 的留出试验用于检查回归器预测能力，验证损失用于配比选择。
 
 ## 5. 导出实际训练包
 
@@ -107,4 +104,3 @@ python -m training.mixture_cli --config config/mixture-learned.local.json \
 ```
 
 详细的容量不足处理、图片导出和数据契约见[数据配比与选择](data-mixtures.md)。
-这套接口已实现算法流程；仓库尚未提供此项目真实语料的训练结果或原论文结果复现记录。

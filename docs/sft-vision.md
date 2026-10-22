@@ -36,9 +36,7 @@ FIN_DOC_SFT_VISION_REVIEW_API_KEY=YOUR_LOCAL_KEY
 FIN_DOC_SFT_VISION_REVIEW_MODEL=YOUR_VISION_REVIEWER
 ```
 
-只启用多模态任务时不要求 `FIN_DOC_SFT_GENERATE_*` 和 `FIN_DOC_SFT_REVIEW_*`。
-如果在同一配方中加入文本任务，则也要配置相应文本角色。
-本地预检只检查配置，不能证明远端模型实际支持图片。
+只启用多模态任务时，配置 `FIN_DOC_SFT_VISION_GENERATE_*` 和 `FIN_DOC_SFT_VISION_REVIEW_*`。在同一配方中加入文本任务时，同时配置文本生成与审核角色。
 
 ```sh
 python -m training.sft_cli --config config/sft-vision.local.json preflight
@@ -72,8 +70,8 @@ python -m training.sft_cli \
 
 对应参数：`max_table_rows`、`max_table_columns`、`max_table_cells`、`max_image_bytes`、`max_image_pixels`。
 问题／答案字符上限与其他 SFT 任务相同。若大表无法在模型输出限制内完整返回，应排除或调整配方，而非拼接截断结果。
-区域位置和视觉事实仍由模型审核，需要人工抽查，不能把自动通过等同于标注真值。
-图片按原字节打包，不会自动对图片做隐私遮挡。
+区域位置、数值与图像事实由独立视觉审核模型检查。
+图片按原字节打包。
 
 ## 便携导出与加载
 
@@ -91,7 +89,7 @@ SFT v2 输出分别存放文本与多模态数据：
 `manifest.json` 增加模态数量、图片数量与导出文件索引。
 把整个数据集目录移动到另一台机器后，训练图片引用仍然有效；完整历史审计仍需原数据目录。
 
-多模态消息示意（哈希和答案为格式示例）：
+样本结构示例：
 
 ```json
 {
@@ -118,9 +116,7 @@ for example in records:
     print(len(example["images"]))
 ```
 
-消息结构参考 [TRL 视觉数据格式](https://huggingface.co/docs/trl/main/en/dataset_formats#vision-datasets)：
-类型化 content 与单独 images。目标模型的 processor、chat template、图像 token 和批处理方式由下游训练程序配置。
-这里不宣称已经与某个训练框架完成联调，也不会自动启动训练。
+消息结构参考 [TRL 视觉数据格式](https://huggingface.co/docs/trl/main/en/dataset_formats#vision-datasets)：类型化 content 与独立 images。在训练程序中配置目标模型的 processor、chat template、图像 token 和批处理方式。训练入口见[单卡 SFT](https://github.com/Chal1ce/FinFlow/blob/main/agent/trainers/sft/README.md)。
 
 ## 校验、划分和版本
 
@@ -139,11 +135,6 @@ python -m workflow.flywheel_cli --data-root data trace --sample-id YOUR_SFT_SAMP
 引擎更新为 `sft-v2`，会生成新的配方身份；继续生成时请使用新的 dataset ID。
 旧数据和审计不改写；完全相同请求的模型响应仍可命中缓存。
 新文本／多模态导出都是累计快照，不能直接拼接多次续作结果。
-
-## 当前状态
-
-代码已加入多模态生成、原图审核、区域记录、便携图片导出、PIL 加载和增强校验。
-尚未运行功能测试、真实模型验收或下游视觉模型训练；不会创建真实数据或调用付费模型来替代这些待办。
 
 ## 描述与多轮问答
 

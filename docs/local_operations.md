@@ -12,7 +12,6 @@ nav_order: 6
 1. TOC
 {:toc}
 
-
 [文档首页](index.md) · [项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
 本手册面向单机、本地磁盘和 SQLite 的运行方式。项目不依赖 PostgreSQL、对象存储、
@@ -124,8 +123,7 @@ python -m workflow.cli --data-root data run --pipeline collected_financial `
   --llm-backend mock
 ```
 
-没有成功采集报告时，工作流返回 `skipped` 并以退出码 `0` 结束。这表示本轮没有可处理
-输入，不是 OCR 或治理失败。
+没有成功采集报告时，工作流返回 `skipped`，退出码为 `0`。
 
 ### 2.3 治理已有 OCR 输出
 

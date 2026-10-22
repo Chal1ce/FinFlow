@@ -61,4 +61,4 @@ FIN_DOC_PRETRAIN_TOKENIZER=/absolute/path/to/target-model/tokenizer.json
 
 Keep keys in local configuration and out of Git. The tokenizer must match the target model.
 
-Run preflight again, then follow [Daily data flywheel](data-flywheel.md). Configure source training admission explicitly; successful collection alone does not admit candidates to training.
+Run preflight again, then follow [Daily data flywheel](data-flywheel.md). Configure training admission for each source in `source_policy`.

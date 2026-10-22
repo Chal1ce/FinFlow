@@ -128,11 +128,10 @@ Per-run JSON lives at `manifests/daily/<run_id>.json`; calendar-day JSON/Markdow
 The CLI, channel report commands and MCP share aggregation semantics:
 
 - Task status, errors, queue backlog, candidate review and image/table inventories; model requests and raw usage without cost estimates.
-- Newly registered candidates, visual assets, CPT samples/origins and SFT samples. Recovery registrations count as additions, not fresh model generation.
+- Newly registered candidates, visual assets, CPT samples/origins and SFT samples. Recovery registrations count as additions.
 - Stage built/reused/indexed results, timing, paths and failure reasons.
 - Current version, input/removed/selected samples, train/validation sizes, target/actual quotas, groups and shortfalls.
 - Version reports include coverage targets and changes against the previous version. Tokenizer changes disable incompatible token comparisons.
 
 Multiple runs on one day sum task/request/addition counters, while queue and dataset inventories remain latest snapshots.
 Caught failures attempt to persist a report. Abrupt termination is recorded as interrupted on the next locked run; unpersisted request/task counts are unavailable.
-Independent test sets, contamination checks, supervised-token SFT mixtures, automatic gap-filling generation and target-model training are not implemented.

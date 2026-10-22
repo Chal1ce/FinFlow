@@ -47,5 +47,4 @@ quality signals in provenance and manifests rather than in training text.
 
 These exports use `usage_scope=internal-only` and `rights_status=unknown`.
 Redaction replaces emails with `<EMAIL>` and mainland Chinese mobile/common
-landline numbers with `<PHONE>`. Confirm actual source permissions and applicable
-usage before training; pattern redaction does not establish those permissions.
+landline numbers with `<PHONE>`. Redaction counts are recorded in provenance.

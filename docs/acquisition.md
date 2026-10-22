@@ -13,7 +13,6 @@ parent: 数据处理
 1. TOC
 {:toc}
 
-
 [文档首页](index.md) · [项目首页](https://github.com/Chal1ce/FinFlow/blob/main/README.md)
 
 本页用于单独运行下载器和采集器。每日自动采集及后续处理使用[数据飞轮](data-flywheel.md)，其分页窗口、队列和预算策略以飞轮说明为准。

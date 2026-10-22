@@ -90,5 +90,3 @@ Original images and complete candidate JSON are uploaded as files. Human review 
 - Restart all relevant processes after changing credentials, users, or channels. Workers recheck local roles and conversation rules.
 - Receipts protect completed stages, but an interrupted upload before checkpointing can still duplicate attachments.
 - `app-slack` is unapproved for training by default and follows the shared review/publication policy.
-
-Static checks are complete; live workspace operation and functional validation remain pending.

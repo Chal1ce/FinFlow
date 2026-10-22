@@ -17,8 +17,7 @@ has_children: true
 | Slack | Socket Mode | `!status` | [Slack 接入](app-slack.md) |
 | OpenClaw / Hermes 等 | 本机 MCP stdio | `finflow_status` | 本页第 4 节 |
 
-四个消息入口均提供 PDF 导入、原图/完整候选文件、人工复核命令和日报通知。每个入口默认关闭，需要各自的凭证、身份与用户白名单。
-飞书云文档、多维表格、远程 HTTP MCP 尚未接入。代码与静态检查已完成，功能测试及真实账号/外部助手联调仍待执行。
+四个消息入口均提供 PDF 导入、原图/完整候选文件、人工复核命令和日报通知。每个入口默认关闭，需要各自的凭证、机器人身份与用户白名单。
 
 ```mermaid
 flowchart LR
@@ -220,8 +219,7 @@ mcp_servers:
     enabled: true
 ```
 
-对应字段见 [Hermes MCP 配置](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/)。
-重启或重新加载客户端后，可让助手“查询 FinFlow 今天的处理状态”。本项目提供标准接口，尚未在两款助手中实连验收。
+对应字段见 [Hermes MCP 配置](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/)。重启或重新加载客户端后，可让助手“查询 FinFlow 今天的处理状态”。
 
 ### 可选写操作
 
@@ -276,10 +274,7 @@ python -m integrations.cli job job-任务ID
 进程意外退出后，原 `running` 应用任务标记为 `interrupted`，检查底层结果后用 `/retry job-...` 显式重试。
 已提交的人工复核不自动重试；重新获取候选检查最新决定。
 
-消息和通知采用持久化队列，失败最多自动尝试五次并退避。通知保存各阶段发送回执，并使用飞书消息 UUID 辅助去重；
-网络或进程中断仍可能造成重复通知，不承诺严格一次投递。
-新渠道同样保存发送回执，并尊重可用的限流等待时间。Telegram 先持久化消息再保存轮询位置；
-Slack 先持久化再确认事件。Discord 冷启动不会自动补拉离线消息，未入库的指令需要重新发送。
+消息和通知采用持久化队列，失败最多自动尝试五次并退避。发送回执和飞书消息 UUID 用于重试去重；发送成功但回执未落盘时，重试可能重复发送。Telegram 先持久化消息再保存轮询位置，Slack 先持久化再确认事件；Discord 冷启动后，未入库的离线指令需要重新发送。
 
 恢复失败通知：
 
@@ -302,5 +297,4 @@ python -m integrations.cli --config config/integrations.local.json retry-deliver
 - `integrations/mcp_server.py`：只读默认、可选写工具的 MCP 服务。
 - `integrations/cli.py`：统一运行入口。
 
-实现参考消息适配器、统一工具、队列与通知的架构思路，未复制 OpenClaw/Hermes 源码，也不依赖其代理运行时。
-新增其他渠道时，在验证平台身份后映射到相同服务动作，并保留权限、消息去重、来源信息和发送回执。
+新增渠道通过统一服务和渠道注册表接入，提供平台身份校验、角色映射、消息去重及发送回执。

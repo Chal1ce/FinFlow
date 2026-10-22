@@ -73,5 +73,3 @@ python -m integrations.cli --config config/integrations.local.json discord
 - Gateway 可自动重连，但冷启动不会主动补拉历史。停机期间或入库失败的命令需要重新发送；已进入本地队列的任务可恢复。
 - 已发送阶段保存回执，近期重复发送使用 Discord nonce 辅助去重；仍可能有重复通知。
 - `app-discord` 的训练用途默认未批准。当前无原生交互按钮，用 `!review` 提交人工决定。
-
-目前完成静态检查；真实机器人和完整功能联调尚待配置后执行。

@@ -15,8 +15,7 @@ FinFlow generates three types of Chinese text SFT examples from verified, locall
 
 This guide covers **text SFT**: training inputs contain context and questions, not images.
 Original table images are used for review only. Optional [visual SFT](sft-vision.md) exports real image inputs.
-Preference pairs, retrieval negatives, multi-turn conversations and model training are not implemented.
-Generated image descriptions, translations and rewrites are not treated as new factual evidence.
+Use the [single-GPU SFT launcher](https://github.com/Chal1ce/FinFlow/blob/main/agent/trainers/sft/README.md) to train exported datasets.
 
 ## 1. Configure models
 
@@ -85,7 +84,6 @@ tables and conversations are never silently truncated or split into separate exa
 - `validation_fraction`: initial assignment ratio; previously frozen or CPT-assigned works retain their split.
 - `generation_prompt_version`, `review_prompt_version`: prompt revision identifiers.
 
-These are workload and length limits, not a provider price table or currency budget.
 Exports retain complete `messages`; the downstream trainer supplies its tokenizer, chat template,
 length validation and packing policy.
 
@@ -99,10 +97,7 @@ Supported calculations use two operands with identical units:
 | `percentage` | a / b × 100% |
 | `growth_rate` | (a − b) / b × 100%, requiring b > 0 |
 
-Values and units require exact evidence quotations. Decimal arithmetic uses `ROUND_HALF_UP` and
-0–6 decimal places. No generated code is executed, units are not converted and percentage operands
-are unsupported. Review must still establish row/column meaning, period and reporting scope:
-correct arithmetic alone does not establish correct operand selection.
+Values and units use exact evidence quotations. Decimal arithmetic uses `ROUND_HALF_UP` with 0–6 decimal places and two amounts in the same unit. The reviewer checks operand selection, row/column meaning, period, and reporting scope.
 
 ## 4. Outputs, audit and lineage
 
@@ -119,8 +114,7 @@ Output directory: `data/training/sft/datasets/<dataset-id>/`.
 | `manifest.json`, `checksums.sha256` | Recipe, model identities, input release, counts, status and integrity inventory |
 
 Each text training row has three messages: `system`, `user` with evidence/task, and `assistant`.
-`sample_id` is metadata and must not be concatenated into the prompt. These are synthetic examples;
-automated review is not human validation. Inspect samples before training.
+`sample_id` is metadata; use `messages` as the training input.
 
 ```sh
 python -m training.sft_cli verify data/training/sft/datasets/sft-001
@@ -148,9 +142,7 @@ upstream human candidate approval does not approve derived SFT examples.
 
 Splits are persisted before generation and inherit existing CPT assignments. Identical context, identical image bytes and
 same-work derivatives share a split. New CPT builds also respect SFT assignments. Historical conflicts
-exclude affected SFT evidence with `split_conflict`. There are only train/validation splits, no independent
-test set. Validation may be used during recipe development and is not a final blind benchmark.
-This does not automatically detect every semantic near-duplicate, republication or unlinked document revision.
+exclude affected SFT evidence with `split_conflict`. Exports use train/validation splits grouped by logical work, identical context, and image bytes.
 
 ## 6. Daily generation
 
@@ -170,13 +162,7 @@ python -m workflow.flywheel_cli --config config/flywheel.local.json run
 SFT runs after evidence publication and CPT generation, using remaining flywheel time and its own
 request cap. Completed jobs reuse cached results. Daily summaries and channel reports include `sft_dataset`.
 SFT failures make the daily run `partial` while preserving published CPT data.
-The default is `enabled=false`; this feature does not install scheduling or call models by itself.
-
-## Implementation status
-
-The first three text-SFT recipes, resumable caches, arithmetic checks, independent review, shared splits
-and artifact lineage are implemented. Static checks and documentation builds are not functional tests
-or real-model acceptance. Those validations have not yet been performed for the new SFT implementation.
+Set `enabled=true` to include SFT in daily generation; the default is `false`.
 
 ## Additional generation strategies
 
