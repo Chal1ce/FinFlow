@@ -28,7 +28,7 @@
     "coverage": "full"
   },
   "environment-check": {
-    "source_sha256": "fbc042df02938d6c9324ac377ea69051382d9a6ec4ecc2419f40adb663304497",
+    "source_sha256": "8e2a84dcdafe7193afaac813ced35fe7c1568bb84a162ab96c53c315ec20d2eb",
     "coverage": "summary"
   },
   "github-pages": {

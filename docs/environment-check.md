@@ -22,7 +22,7 @@ python -m workflow.flywheel_cli preflight
 python -m workflow.flywheel_cli --config config/flywheel.local.json preflight
 ```
 
-预检检查本地依赖、启用角色的配置和 tokenizer 文件，不请求远端服务。通过预检后，服务鉴权、图像支持和输出质量仍需在运行中确认。
+预检检查本地依赖、启用角色的配置和 tokenizer 文件，不请求远端服务。
 
 ## 常见缺项
 

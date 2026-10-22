@@ -22,7 +22,7 @@ For a custom recipe, use the same global `--config` argument as the run command:
 python -m workflow.flywheel_cli --config config/flywheel.local.json preflight
 ```
 
-Preflight checks local dependencies, enabled model-role configuration, and tokenizer files without calling remote services. Authentication, image support, and output quality still need confirmation during operation.
+Preflight checks local dependencies, enabled model-role configuration, and tokenizer files without calling remote services.
 
 ## Common missing configuration
 
