@@ -4,7 +4,7 @@ remote_theme: just-the-docs/just-the-docs@v0.12.0
 url: https://chal1ce.github.io
 baseurl: /FinFlow
 exclude:
-  - en
+  - en/
   - Gemfile
   - Gemfile.lock
   - translations.json
