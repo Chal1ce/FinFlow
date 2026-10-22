@@ -562,7 +562,10 @@ class OpenAIGovernanceModel:
             for chunk in chunks
         }
 
-        for index, chunk in table_chunks:
+        report_progress = getattr(self, "report_progress", None)
+        if report_progress:
+            report_progress("table_summary", completed=0, total=len(table_chunks))
+        for table_index, (index, chunk) in enumerate(table_chunks):
             key = _chunk_key(chunk)
             table_result = self._summarize_table(
                 chunk, self._neighboring_context(chunks, index)
@@ -581,6 +584,9 @@ class OpenAIGovernanceModel:
                 }
             )
             chunk_enrichments[key] = _set_retrieval_text(chunk, enrichment)
+
+            if report_progress:
+                report_progress("table_summary", completed=table_index + 1, total=len(table_chunks))
 
         table_summaries = [
             {
@@ -611,7 +617,11 @@ class OpenAIGovernanceModel:
                 ),
             },
         ]
+        if report_progress:
+            report_progress("document_metadata", completed=0, total=1)
         result = self._chat_json(document_messages)
+        if report_progress:
+            report_progress("document_metadata", completed=1, total=1)
         document_governance = {
             "title": str(result.get("title") or title),
             "language": str(result.get("language") or detect_language(text)),
@@ -622,6 +632,8 @@ class OpenAIGovernanceModel:
         }
 
         document_summary = str(document_governance.get("summary") or "")
+        if report_progress:
+            report_progress("chunk_context", completed=0, total=len(chunks))
         for index, chunk in enumerate(chunks):
             key = _chunk_key(chunk)
             enrichment = dict(chunk_enrichments.get(key) or fallback_chunk_enrichment(chunk))
@@ -649,6 +661,9 @@ class OpenAIGovernanceModel:
                 }
             )
             chunk_enrichments[key] = _set_retrieval_text(chunk, enrichment)
+
+            if report_progress:
+                report_progress("chunk_context", completed=index + 1, total=len(chunks))
 
         return {
             "model": self.name,

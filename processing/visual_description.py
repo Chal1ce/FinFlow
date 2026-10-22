@@ -21,6 +21,11 @@ class RoleClient:
         self.config = config
         self.requests = 0
         self.usage = {}
+        self.progress = None
+
+    def _progress(self, event, role):
+        if self.progress is not None:
+            self.progress.model_event(event, role)
 
     def generate(self, role, prompt, *, image=None, image_hash=None, messages=None):
         from openai import OpenAI
@@ -35,13 +40,22 @@ class RoleClient:
             encoded = base64.b64encode(image.read_bytes()).decode("ascii")
             content.append({"type": "image_url", "image_url": {"url": "data:image/png;base64," + encoded}})
         self.requests += 1
-        client = OpenAI(base_url=model.endpoint, api_key=model.key, timeout=model.timeout, max_retries=0)
+        self._progress("attempted", role)
+        client = None
         try:
+            client = OpenAI(base_url=model.endpoint, api_key=model.key, timeout=model.timeout, max_retries=0)
+            options = {"response_format": {"type": "json_object"}} if role == "govern" else {}
             response = client.chat.completions.create(
-                model=model.model, messages=messages or [{"role": "user", "content": content}], temperature=0, max_tokens=model.max_tokens
+                model=model.model, messages=messages or [{"role": "user", "content": content}], temperature=0,
+                max_tokens=model.max_tokens, **options,
             )
+        except Exception:
+            self._progress("failed", role)
+            raise
         finally:
-            client.close()
+            if client is not None:
+                client.close()
+        self._progress("received", role)
         if not response.choices:
             raise ValueError("model returned no choice")
         choice = response.choices[0]
@@ -98,6 +112,11 @@ class BudgetedGovernanceModel(OpenAIGovernanceModel):
         self.version = config.roles["govern"].version or self.model
         self.response_artifact_uids = []
 
+    def report_progress(self, name, *, completed, total):
+        progress = getattr(self.role_client, "progress", None)
+        if progress is not None:
+            progress.phase(name, completed=completed, total=total)
+
     def _chat_json(self, messages):
         prompt = json.dumps(messages, ensure_ascii=False)
         identity = digest({"prompt": prompt, "model": self.config.roles["govern"].identity()})
@@ -105,6 +124,9 @@ class BudgetedGovernanceModel(OpenAIGovernanceModel):
         previous = self.store.get("governance-response", identity)
         if previous and path.exists() and sha256(path) == previous["sha256"]:
             response = json.loads(path.read_text(encoding="utf-8"))["response"]
+            progress = getattr(self.role_client, "progress", None)
+            if progress is not None:
+                progress.model_event("cache_hits", "govern")
         else:
             response = self.role_client.generate("govern", prompt, messages=messages)
             if response.get("finish_reason") != "stop" or response.get("refusal"):

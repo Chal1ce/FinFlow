@@ -91,7 +91,7 @@ class FlywheelStore(StateStore):
             )
         return uid
 
-    def claim(self, owner, *, lease_seconds=3600, refiner_identity=None):
+    def claim(self, owner, *, lease_seconds=3600, refiner_identity=None, task_filter=None):
         now = time.time()
         self.connection.execute("BEGIN IMMEDIATE")
         try:
@@ -100,14 +100,16 @@ class FlywheelStore(StateStore):
                 "available_at=? WHERE status='running' AND lease_until<?",
                 (now, now),
             )
-            row = self.connection.execute(
+            rows = self.connection.execute(
                 "SELECT t.* FROM processing_task t LEFT JOIN processing_task d "
                 "ON d.task_uid=t.dependency_uid WHERE t.status IN ('pending','retry_wait','deferred') "
                 "AND t.available_at<=? AND (t.dependency_uid IS NULL OR d.status='succeeded') "
                 "AND (t.kind<>'refine' OR json_extract(t.payload_json,'$.refiner_identity')=?) "
-                "ORDER BY t.created_at,t.task_uid LIMIT 1",
+                "ORDER BY t.created_at,t.task_uid",
                 (now, refiner_identity),
-            ).fetchone()
+            )
+            row = next((row for row in rows if task_filter is None or task_filter(json.loads(row["payload_json"]))), None)
+            rows.close()
             if row:
                 self.connection.execute(
                     "UPDATE processing_task SET status='running',attempts=attempts+1,lease_until=?,owner=?,updated_at=? WHERE task_uid=?",
@@ -157,7 +159,21 @@ class FlywheelStore(StateStore):
     def counts(self):
         return {row[0]: row[1] for row in self.connection.execute("SELECT status,count(*) FROM processing_task GROUP BY status")}
 
-    def active_counts(self, refiner_identity):
+    def active_counts(self, refiner_identity, *, task_filter=None):
+        if task_filter is not None:
+            from collections import Counter
+
+            return dict(
+                Counter(
+                    row["status"]
+                    for row in self.connection.execute(
+                        "SELECT status,payload_json FROM processing_task WHERE kind<>'refine' "
+                        "OR json_extract(payload_json,'$.refiner_identity')=?",
+                        (refiner_identity,),
+                    )
+                    if task_filter(json.loads(row["payload_json"]))
+                )
+            )
         return {
             row[0]: row[1]
             for row in self.connection.execute(

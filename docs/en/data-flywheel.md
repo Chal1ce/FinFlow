@@ -118,6 +118,8 @@ are review signals, not a sole admission rule.
 python -m workflow.flywheel_cli run
 python -m workflow.flywheel_cli run --no-discover
 python -m workflow.flywheel_cli status
+python -m workflow.flywheel_cli status --watch
+python -m workflow.flywheel_cli report --latest --format markdown
 python -m workflow.flywheel_cli audit --status needs_review --limit 20
 python -m workflow.flywheel_cli audit --method visual --limit 10
 
@@ -135,6 +137,52 @@ Human decisions preserve reviewer, reason, input hash, and prior decision. Human
 acceptance still requires source approval. Unresolved image coordinates retain OCR,
 page number, bbox, and reason; correct extraction instead of accepting text as a
 replacement for image localization.
+
+Use `report --latest --format markdown` for readable diagnostics for the latest
+run on the selected date. JSON reports also expose top-level `errors` and
+`stop_reasons`: stage failures and budget stops are separate. Error summaries use
+fixed messages rather than raw provider exceptions, payloads, or credentials.
+Legacy download failures can be enriched from the current download manifest;
+these details are labeled `details_from=current_download_manifest`.
+
+### Live progress
+
+For a local run, open another terminal with the same environment and run:
+
+```sh
+python -m workflow.flywheel_cli --config config/flywheel.local.json --data-root data status --watch
+```
+
+The view refreshes every five seconds and shows the outer run, current document,
+stage, elapsed time, last activity, and task counts by stage within the selected
+scope. Change the interval with `--interval 10`. Ctrl-C stops viewing; processing
+continues. The viewer exits when the run finishes or its process has stopped.
+Tasks are added dynamically, so there is no overall completion percentage or ETA.
+
+New workers print progress to stderr and atomically save snapshots to
+`manifests/progress/<run_id>.json`. Governance reports completed/total counts for
+table summaries, document metadata, and chunk context, plus model requests,
+responses, failures, cache hits, and the role awaiting a response. Use
+`run --no-progress` to suppress console progress; final JSON stays on stdout.
+Snapshots contain counters and identifiers, without prompts, responses, or credentials.
+
+Workers started before this update can keep running. The viewer uses existing
+tasks, steps, and cached responses to show their current stage, last completed
+model step, and saved response count. That count is a lower bound of successfully
+persisted responses, not a live request total; it excludes cache reuse and unsaved
+responses. Detailed counters are available from the next run. Use
+`status --format text` for one readable snapshot; a single `status` still defaults
+to JSON, with a new `progress` field. Status reads local files and the database
+without migrations or OCR/model calls.
+
+The default `processing_scope` is `all`, including backfill of existing OCR and
+queued work from other sources. For a small run in a shared data root, set
+`"processing_scope": "collection"` in the local flywheel JSON. Backfill and task
+claims then follow enabled sources and financial stock/year/report-type targets.
+Disabling scholarly discovery also excludes its existing queued work. Nothing is
+deleted: `queue` remains a global snapshot, while `active_queue` reflects the
+selected execution scope. Publication and asset inventories retain their existing
+global behavior. Changing scope does not change the processing recipe identity.
 
 Task states are `pending`, `running`, `succeeded`, `retry_wait`, `failed`, `deferred`,
 `rejected`, and `needs_review`; replaced attempts become `superseded`. Leases and
@@ -169,11 +217,12 @@ The flywheel database is always `state/pipeline.db` under that root.
 | `processed/visual_descriptions`, `processed/transforms` | Raw model responses, prompts, input identities |
 | `training/candidates`, `training/decisions` | Candidates and model/human decisions |
 | `manifests/daily` | Daily summaries |
+| `manifests/progress` | Outer-run stages, substage counters, and model request counts |
 
 Before adding flywheel tables to an existing database, the migration creates
 `pipeline.db.before-flywheel.bak` using SQLite's backup API. Migration adds tables;
-it does not delete old ones. `status` may initialize/migrate the database; preflight
-does not. Existing OCR can be backfilled without calling OCR again.
+it does not delete old ones. Operations that write to the database trigger the
+migration; `status` and preflight do not. Existing OCR can be backfilled without calling OCR again.
 Stop scheduling before restoring a database and preserve the current database,
 WAL, and complete data root. Corpus files alone cannot reconstruct every queue
 state or human decision.

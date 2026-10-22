@@ -85,6 +85,7 @@ class FlywheelConfig:
         if not self.collection.is_absolute():
             self.collection = self.path.resolve().parent.parent / self.collection
         self.backend = os.getenv("FIN_DOC_FLYWHEEL_OCR_BACKEND", self.policy.get("ocr_backend", "local"))
+        self.processing_scope = self.policy.get("processing_scope", "all")
         configured_options = (
             self.runtime.local_paddle.optional_payload if self.backend == "local" else self.runtime.cloud_paddle.optional_payload
         )
@@ -122,7 +123,7 @@ class FlywheelConfig:
             self.sft = SFTConfig(sft_path)
         self.version = digest(
             {
-                "policy": {k: v for k, v in self.policy.items() if k != "sft"},
+                "policy": {k: v for k, v in self.policy.items() if k not in {"sft", "processing_scope"}},
                 "models": {k: v.identity() for k, v in self.roles.items()},
                 "backend": self.backend,
                 "governance_backend": self.governance_backend,
@@ -145,6 +146,8 @@ class FlywheelConfig:
 
     def preflight(self) -> dict:
         errors = []
+        if self.processing_scope not in {"all", "collection"}:
+            errors.append("processing_scope must be all or collection")
         if self.sft is not None:
             errors.extend(self.sft.preflight()["errors"])
         if self.backend not in {"local", "cloud"}:

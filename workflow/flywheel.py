@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from core.context import PipelineContext
+from core.diagnostics import PipelineStageError, download_diagnostic, exception_diagnostic, governance_diagnostic
 from core.flywheel_files import register_file, safe_path, sha256, write_json
 from core.ids import stable_uid
 from delivery.flywheel_release import evidence_identity, publish_evidence
@@ -27,6 +28,8 @@ from storage.flywheel_store import FlywheelStore
 from storage.state_store import utc_now
 from training.flywheel_corpus import FlywheelCorpusBuilder, TokenSplitter
 from workflow.flywheel_config import digest
+from workflow.flywheel_scope import CollectionScope
+from workflow.live_progress import ProgressWriter
 from workflow.daily_report import inventory, persist_daily, processing_stages, recover_interrupted, refiner_summary
 
 
@@ -57,14 +60,17 @@ class DailyLock:
 
 
 class DailyFlywheel:
-    def __init__(self, config, *, client=None, processor=None):
+    def __init__(self, config, *, client=None, processor=None, progress=False):
         self.config = config
         self.root = config.root
         self.client = client or RoleClient(config)
         self.processor = processor
         self.collection = json.loads(config.collection.read_text(encoding="utf-8"))
+        self.task_filter = CollectionScope(self.collection) if config.processing_scope == "collection" else None
         self.report_runner = None
         self.scholar_runner = None
+        self.console_progress = progress
+        self.progress = None
 
     def run(self, *, batch_id=None, discover=True):
         preflight = self.config.preflight()
@@ -81,6 +87,8 @@ class DailyFlywheel:
             store.start_run(context, dry_run=False)
             initial_inventory = inventory(store)
             store.put("daily-start", context.run_id, {**context.as_mapping(), "inventory": initial_inventory})
+            self.progress = ProgressWriter(self.root, context, model_limit=self.config.model_limit, console=self.console_progress)
+            self.client.progress = self.progress
             initial_requests = getattr(self.client, "requests", 0) or 0
             initial_usage = {role: dict(values) for role, values in (getattr(self.client, "usage", {}) or {}).items()}
             # The kernel lock proves no earlier daily worker is still alive.
@@ -90,17 +98,20 @@ class DailyFlywheel:
                     "WHERE status='running' AND owner<>?",
                     (context.run_id,),
                 )
-            errors, completed = [], 0
+            errors, completed, stop_reasons = [], 0, []
             try:
                 if discover:
+                    self.progress.stage("discover")
                     errors.extend(self._discover())
+                self.progress.stage("backfill")
                 self._backfill()
                 if self.config.refiner["enabled"]:
                     from processing.text_refiner import TextRefiner
 
                     plugin = TextRefiner(self)
                     for governed in store.records("governed"):
-                        plugin.enqueue(governed)
+                        if self.task_filter is None or self.task_filter(governed):
+                            plugin.enqueue(governed)
                 lease = (
                     max(
                         self.config.deadline_seconds,
@@ -112,10 +123,14 @@ class DailyFlywheel:
                 )
                 for _ in range(self.config.task_limit):
                     if time.monotonic() - started >= self.config.deadline_seconds:
+                        stop_reasons.append({"code": "time_budget", "message": "本轮运行时间额度已用完，可续跑已有队列。"})
                         break
-                    task = store.claim(context.run_id, lease_seconds=lease, refiner_identity=self.config.refiner_identity)
+                    task = store.claim(
+                        context.run_id, lease_seconds=lease, refiner_identity=self.config.refiner_identity, task_filter=self.task_filter
+                    )
                     if not task:
                         break
+                    self.progress.stage(task["kind"], task=task)
                     step = store.start_step(
                         context,
                         "flywheel-" + task["kind"],
@@ -132,11 +147,17 @@ class DailyFlywheel:
                     except ModelBudgetExceeded:
                         store.finish(task, "deferred", {"reason": "model_budget"}, retry_after=60)
                         store.finish_step(step, "deferred")
+                        stop_reasons.append(
+                            {
+                                "code": "model_budget",
+                                "message": "本轮模型请求额度已用完，可续跑已有队列。",
+                                "limit": self.config.model_limit,
+                            }
+                        )
                         break
                     except Exception as exc:
                         retry = task["attempts"] < int(self.config.policy.get("max_attempts", 3))
-                        # Provider exception strings may contain request payloads or credentials.
-                        error = {"task_uid": task["task_uid"], "stage": task["kind"], "error_type": type(exc).__name__}
+                        error = {"task_uid": task["task_uid"], "stage": task["kind"], **exception_diagnostic(exc)}
                         store.finish(
                             task,
                             "retry_wait" if retry else "failed",
@@ -144,8 +165,11 @@ class DailyFlywheel:
                             retry_after=float(self.config.policy.get("retry_seconds", 300)) * 2 ** (task["attempts"] - 1),
                             error_type=type(exc).__name__,
                         )
-                        store.finish_step(step, "failed", error_msg=type(exc).__name__)
+                        store.finish_step(step, "failed", error_msg=error["message"])
                         errors.append(error)
+                else:
+                    stop_reasons.append({"code": "task_budget", "message": "本轮任务额度已用完，如有积压可续跑。"})
+                self.progress.stage("publish")
                 dataset = {"status": "no_change"}
                 release = None
                 builder = FlywheelCorpusBuilder(
@@ -185,7 +209,7 @@ class DailyFlywheel:
                                 "model_requests": sft_builder.client.requests,
                                 "model_usage": sft_builder.client.usage,
                             }
-                            errors.append({"stage": "sft", "error_type": type(exc).__name__})
+                            errors.append({"stage": "sft", **exception_diagnostic(exc)})
                 from training.daily_release import DailyTrainingRelease
 
                 training_release = DailyTrainingRelease(self.config, store, context, deadline=started + self.config.deadline_seconds).run(
@@ -199,7 +223,7 @@ class DailyFlywheel:
                         }
                     )
                 counts = store.counts()
-                active_counts = store.active_counts(self.config.refiner_identity)
+                active_counts = store.active_counts(self.config.refiner_identity, task_filter=self.task_filter)
                 visual_counts = {r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM visual_asset GROUP BY status")}
                 decision_counts = {
                     r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM training_candidate GROUP BY status")
@@ -238,6 +262,8 @@ class DailyFlywheel:
                     "completed_tasks": completed,
                     "queue": counts,
                     "active_queue": active_counts,
+                    "processing_scope": self.config.processing_scope,
+                    "stop_reasons": stop_reasons,
                     "refiner": refiner_summary(store, context.run_id),
                     "visuals": visual_counts,
                     "candidates": decision_counts,
@@ -262,9 +288,11 @@ class DailyFlywheel:
                 }
                 persist_daily(self.root, store, summary, timezone=self.config.report_timezone)
                 store.finish_run(context.run_id, status)
+                self.progress.stage("completed", status=status)
                 return summary
             except BaseException as exc:
                 store.finish_run(context.run_id, "failed", type(exc).__name__)
+                self.progress.stage("completed", status="failed")
                 failure = {
                     **locals().get("summary", {}),
                     "status": "failed",
@@ -282,7 +310,8 @@ class DailyFlywheel:
                     "dataset": locals().get("dataset", {}),
                     "sft_dataset": locals().get("sft_dataset", {}),
                     "training_release": locals().get("training_release", {"status": "not_started"}),
-                    "errors": [*errors, {"stage": "daily", "error_type": type(exc).__name__}],
+                    "errors": [*errors, {"stage": "daily", **exception_diagnostic(exc)}],
+                    "stop_reasons": stop_reasons,
                     "elapsed_seconds": round(time.monotonic() - started, 3),
                 }
                 try:
@@ -308,7 +337,7 @@ class DailyFlywheel:
                             if qc_passed(validate_candidate(candidate)):
                                 self._register_source("financial", candidate.to_mapping())
                     except Exception as exc:
-                        errors.append({"stage": "discover", "source": adapter.name, "error_type": type(exc).__name__})
+                        errors.append({"stage": "discover", "source": adapter.name, **exception_diagnostic(exc)})
         if self.scholar_runner:
             for adapter in self.scholar_runner.adapters:
                 for target in self.scholar_targets:
@@ -367,7 +396,7 @@ class DailyFlywheel:
             self.store.put("discovery-window", window_uid, window)
             return []
         except Exception as exc:
-            return [{"stage": "discover", "source": adapter.name, "window_uid": window_uid, "error_type": type(exc).__name__}]
+            return [{"stage": "discover", "source": adapter.name, "window_uid": window_uid, **exception_diagnostic(exc)}]
 
     def _register_source(self, group, source):
         version = source.get("metadata_hash") or digest({k: v for k, v in source.items() if k != "discovered_at"})
@@ -392,7 +421,7 @@ class DailyFlywheel:
         if record["status"] in {"metadata_only", "blocked", "quarantined"}:
             return {"task_status": "needs_review" if record["status"] != "metadata_only" else "rejected", "reason": record["status"]}
         if record["status"] not in {"success", "duplicate", "skipped"}:
-            raise RuntimeError("PDF download failed")
+            raise PipelineStageError(download_diagnostic(record))
         raw = safe_path(self.root, record["raw_path"])
         if sha256(raw) != record["raw_file_hash"]:
             raise ValueError("raw PDF checksum mismatch")
@@ -502,6 +531,8 @@ class DailyFlywheel:
         # from the legacy, one-record-per-asset manifest below.
         application_documents = set()
         for document in self.store.records("document"):
+            if self.task_filter is not None and not self.task_filter(document):
+                continue
             source = document.get("source", {})
             if source.get("source_name") not in {"app-feishu", "app-telegram", "app-discord", "app-slack", "app-mcp", "app-local"}:
                 continue
@@ -516,6 +547,8 @@ class DailyFlywheel:
             )
         # Existing OCR is registered and processed; no OCR call is needed.
         for document in discover_documents(self.root):
+            if self.task_filter is not None and not self.task_filter(document):
+                continue
             if (document["work_uid"], document["asset_uid"]) in application_documents:
                 continue
             manifest = document["manifest_record"]
@@ -612,7 +645,8 @@ class DailyFlywheel:
         if any("ModelBudgetExceeded" in error.get("error_msg", "") for error in result.get("processing_errors", [])):
             raise ModelBudgetExceeded("daily model budget reached during governance")
         if result["failed_count"]:
-            raise RuntimeError("text governance failed")
+            failure = next(iter(result.get("processing_errors", [])), {})
+            raise PipelineStageError(governance_diagnostic(failure))
         governed_dir = runner._governed_dir(document)
         governed = json.loads((governed_dir / "governed.json").read_text(encoding="utf-8"))
         artifact = register_file(
@@ -793,6 +827,8 @@ class DailyFlywheel:
             value = json.loads(path.read_text(encoding="utf-8"))
             if value.get("input_identity") != identity or (cached and sha256(path) != cached["sha256"]):
                 raise ValueError("model checkpoint identity/checksum mismatch")
+            if self.progress:
+                self.progress.model_event("cache_hits", role)
             return value["response"]
         kwargs = {"messages": messages} if messages is not None else {}
         response = self.client.generate(

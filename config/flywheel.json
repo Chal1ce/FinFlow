@@ -1,6 +1,7 @@
 {
   "schema_version": "flywheel-v1",
   "collection_config": "config/collection.json",
+  "processing_scope": "all",
   "ocr_backend": "local",
   "ocr_options": {"useDocOrientationClassify": false, "useDocUnwarping": false, "useTableRecognition": true},
   "governance_backend": "auto",

@@ -104,6 +104,8 @@ python -m workflow.flywheel_cli run --no-discover
 
 # 状态与抽样
 python -m workflow.flywheel_cli status
+python -m workflow.flywheel_cli status --watch
+python -m workflow.flywheel_cli report --latest --format markdown
 python -m workflow.flywheel_cli audit --status needs_review --limit 20
 python -m workflow.flywheel_cli audit --method visual --limit 10
 
@@ -123,7 +125,25 @@ python -m workflow.flywheel_cli trace --candidate-id CANDIDATE_ID
 
 任务状态为 `pending/running/succeeded/retry_wait/failed/deferred/rejected/needs_review`；显式人工替换的旧任务为 `superseded`。租约和系统文件锁防止重复执行；持有每日整轮锁的新进程可以恢复已中断的旧任务。单项失败允许独立候选继续推进。
 
-退出码：`0` 成功或无变化，`1` 部分完成/有积压，`2` 配置或整轮失败。每日摘要包含阶段错误类型、队列、视觉状态、候选状态、模型请求/用量、耗时、release 和数据集路径。请求预算跨治理、视觉、翻译、改写、评审共享；用量未返回时记录缺失。
+退出码：`0` 成功或无变化，`1` 部分完成/有积压，`2` 配置或整轮失败。每日摘要包含阶段错误、处理位置、修复建议、队列、视觉状态、候选状态、模型请求/用量、耗时、release 和数据集路径。`errors` 表示实际失败，`stop_reasons` 单独记录模型请求、任务或时间额度耗尽；额度停止可以续跑，不等于整轮崩溃。错误摘要不输出供应商原始异常文本、请求体或凭证。请求预算跨治理、视觉、翻译、改写、评审共享；用量未返回时记录缺失。
+
+`report --latest --format markdown` 只显示所选日期的最新运行和可读诊断；不加 `--latest` 汇总当天全部运行，默认 JSON 也包含顶层 `errors` 和 `stop_reasons`。旧版本下载错误只记了类型时，报告会尝试从当前下载清单补充原因，并标记 `details_from=current_download_manifest`。
+
+### 运行中查看进度
+
+使用本地试跑配置时，在另一个终端运行：
+
+```sh
+python -m workflow.flywheel_cli --config config/flywheel.local.json --data-root data status --watch
+```
+
+每 5 秒刷新一次，显示当前外层运行、文档、阶段、耗时、最近活动和范围内各阶段任务数。`--interval 10` 可调整刷新间隔；Ctrl-C 只退出查看，数据处理继续。检测到本轮结束或进程已退出时，查看命令自动结束。任务会动态增加，因此不显示整条流水线的完成百分比或预计结束时间。
+
+新启动的 `run` 会向 stderr 输出阶段进度，并在 `manifests/progress/<run_id>.json` 原子保存进度快照。治理阶段细分为表格摘要、文档元数据、文本块上下文，显示已完成/总数，以及本轮模型请求、响应、失败和缓存命中数；等待模型时显示对应角色。`run --no-progress` 关闭终端进度输出，最终 JSON 仍输出到 stdout。进度文件不包含提示词、模型响应或凭证。
+
+升级前已启动的进程无需重启：`status` 从现有任务、步骤和响应缓存读取当前阶段、最近完成的模型步骤及已保存响应数；这个响应数是成功落盘数量的下界，不是实时请求用量，也不包含缓存复用或未保存的响应。细分完成数和精确请求计数从下次运行开始记录。`status --format text` 单次显示可读状态；默认单次 `status` 保持 JSON，新增 `progress` 字段。查看状态只读数据库和本地文件，不迁移数据库、不调用 OCR 或模型。
+
+已有数据根目录默认会回填所有本地 OCR，并领取所有来源的积压任务。小范围试跑时，可在本地 flywheel JSON 设置 `"processing_scope": "collection"`：回填与任务领取仅处理采集配置中启用的来源和财报公司/年度/类型；关闭 scholarly 后不会继续处理其旧论文队列。`status.active_queue` 为范围内快照，`queue` 仍保留全库快照；已有任务和文件不会删除。该选项控制任务执行，语料发布和资产统计仍沿用现有全库规则。默认 `"all"` 保持原行为；范围调整不改变处理配方身份，已有成功任务可继续复用。
 
 任务限额和整轮时限是协作式边界：正在执行的 HTTP/OCR 请求由其自身 timeout 控制，整轮不会在请求中途强制杀进程。模型结果逐次原子保存；收到成功响应但还未完成下游任务时中断，下次复用该响应。网络响应到达但尚未保存时发生进程终止，供应商可能已计费，下次仍需请求。
 
@@ -147,8 +167,9 @@ python -m workflow.flywheel_cli trace --candidate-id CANDIDATE_ID
 | `processed/visual_descriptions`、`processed/transforms` | 原始模型响应、实际提示词、输入身份 |
 | `training/candidates`、`training/decisions` | 候选与模型/人工质量判定文件 |
 | `manifests/daily` | 每日摘要 |
+| `manifests/progress` | 外层运行的实时阶段、细分计数和模型请求计数 |
 
-首次在已有数据库增加飞轮表前，通过 SQLite backup API 保存 `pipeline.db.before-flywheel.bak`。迁移为增量建表，不删除旧表。第一次 `status` 等需要数据库的操作也会触发迁移；`preflight` 不迁移数据库。回填已有 OCR 不再次调用 OCR 服务。
+首次在已有数据库增加飞轮表前，通过 SQLite backup API 保存 `pipeline.db.before-flywheel.bak`。迁移为增量建表，不删除旧表，由需要写入数据库的操作触发；`status` 和 `preflight` 不迁移数据库。回填已有 OCR 不再次调用 OCR 服务。
 
 恢复数据库前先停调度，并同时保存数据库、WAL 和整个数据根目录的当前副本；不要只移动正在使用的 `.db` 文件。旧备份恢复后，新增队列和人工判定可能需要从新备份恢复，不能假设仅靠语料文件重建全部状态。
 

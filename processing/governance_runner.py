@@ -20,6 +20,7 @@ from typing import Any, Mapping
 
 from config import load_config as load_runtime_config
 from core.context import PipelineContext
+from core.diagnostics import exception_diagnostic
 from core.ids import artifact_uid, chunk_enrichment_uid, stable_uid
 from core.logging import add_logging_arguments, configure_logging_from_args, get_logger, log_event
 from processing.cleaners import (
@@ -348,6 +349,7 @@ class GovernanceRunner:
                                 "asset_uid": document["asset_uid"],
                                 "backend": document["backend"],
                                 "error_msg": f"{type(exc).__name__}: {exc}",
+                                "diagnostic": exception_diagnostic(exc),
                             }
                         )
                         state_store.finish_step(

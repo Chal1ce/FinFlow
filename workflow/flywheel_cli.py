@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import uuid
 import time
@@ -18,7 +19,8 @@ from training.flywheel_corpus import build_snapshot, verify
 from workflow.flywheel import DailyFlywheel, DailyLock
 from workflow.flywheel_config import FlywheelConfig
 from core.context import PipelineContext
-from workflow.daily_report import aggregate, inventory, persist_daily, recover_interrupted
+from core.diagnostics import exception_diagnostic
+from workflow.daily_report import aggregate, diagnose_run, inventory, markdown, persist_daily, recover_interrupted
 from storage.state_store import utc_now
 
 
@@ -31,11 +33,17 @@ def main(argv=None):
     run = commands.add_parser("run")
     run.add_argument("--batch-id", default=os.getenv("FIN_DOC_BATCH_ID"))
     run.add_argument("--no-discover", action="store_true", help="drain local queue and backfill existing OCR")
-    commands.add_parser("status")
+    run.add_argument("--no-progress", action="store_true", help="suppress live progress on stderr; keep final JSON on stdout")
+    status = commands.add_parser("status", help="read live progress without changing the database or calling providers")
+    status.add_argument("--watch", action="store_true", help="refresh until the active run ends; Ctrl-C stops viewing")
+    status.add_argument("--interval", type=float, default=5, help="watch refresh interval in seconds, at least 1")
+    status.add_argument("--format", choices=["json", "text"], help="default: JSON once, text when watching")
     refinements = commands.add_parser("refiner-status", help="inspect local plugin tasks without calling models")
     refinements.add_argument("--limit", type=int, default=20)
     report = commands.add_parser("report", help="read a calendar-day report without calling providers")
     report.add_argument("--date", help="YYYY-MM-DD in FIN_DOC_REPORT_TIMEZONE")
+    report.add_argument("--latest", action="store_true", help="show only the latest run on the selected date")
+    report.add_argument("--format", choices=["json", "markdown"], default="json")
     publish = commands.add_parser("publish-training", help="resume training publication only; no discovery, OCR or models")
     publish.add_argument("--sft-dataset", type=Path, help="explicit completed SFT snapshot; otherwise reuse current evidence export")
     release_check = commands.add_parser("verify-training", help="verify a portable final training release")
@@ -70,7 +78,26 @@ def main(argv=None):
         if args.command == "preflight":
             result = config.preflight()
         elif args.command == "run":
-            result = DailyFlywheel(config).run(batch_id=args.batch_id, discover=not args.no_discover)
+            result = DailyFlywheel(config, progress=not args.no_progress).run(batch_id=args.batch_id, discover=not args.no_discover)
+        elif args.command == "status":
+            from workflow.live_progress import read_status, render_status
+
+            if args.interval < 1 or not math.isfinite(args.interval):
+                raise ValueError("status --interval must be a finite number >= 1")
+            output_format = args.format or ("text" if args.watch else "json")
+            try:
+                while True:
+                    result = read_status(config)
+                    if args.watch and output_format == "text":
+                        print(f"\n--- {datetime.now().astimezone():%H:%M:%S} ---", flush=True)
+                    rendered = render_status(result) if output_format == "text" else json.dumps(result, ensure_ascii=False, indent=2)
+                    print(rendered, flush=True)
+                    if not args.watch or result["progress"]["state"] != "running":
+                        break
+                    time.sleep(args.interval)
+            except KeyboardInterrupt:
+                pass
+            return 0
         elif args.command == "verify-training":
             from training.daily_release import verify_release
 
@@ -137,8 +164,15 @@ def main(argv=None):
                 if args.command == "report":
                     zone = ZoneInfo(config.report_timezone)
                     date = datetime.strptime(args.date, "%Y-%m-%d").date() if args.date else datetime.now(zone).date()
-                    runs = [r for r in store.records("daily") if datetime.fromisoformat(r["created_at"]).astimezone(zone).date() == date]
-                    print(json.dumps(aggregate(runs, date.isoformat(), config.report_timezone), ensure_ascii=False, indent=2))
+                    runs = [
+                        diagnose_run(config.root, store, r)
+                        for r in store.records("daily")
+                        if datetime.fromisoformat(r["created_at"]).astimezone(zone).date() == date
+                    ]
+                    if args.latest:
+                        runs = sorted(runs, key=lambda r: (r["created_at"], r["run_id"]))[-1:]
+                    result = aggregate(runs, date.isoformat(), config.report_timezone)
+                    print(markdown(result) if args.format == "markdown" else json.dumps(result, ensure_ascii=False, indent=2))
                     return 0
                 if args.command == "audit":
                     if not 1 <= args.limit <= 1000:
@@ -197,6 +231,8 @@ def main(argv=None):
                 result = {
                     "status": "success",
                     "queue": store.counts(),
+                    "processing_scope": config.processing_scope,
+                    "active_queue": store.active_counts(config.refiner_identity, task_filter=DailyFlywheel(config).task_filter),
                     "candidates": {
                         r[0]: r[1] for r in store.connection.execute("SELECT status,count(*) FROM training_candidate GROUP BY status")
                     },
@@ -211,8 +247,10 @@ def main(argv=None):
         return 2 if result.get("status") == "failed" else 1 if result.get("status") == "partial" else 0
     except Exception as exc:
         # Do not print SDK payloads or credential-bearing exception strings.
-        message = str(exc) if isinstance(exc, (ValueError, FileNotFoundError)) else "see persistent stage status"
-        print(json.dumps({"status": "failed", "error_type": type(exc).__name__, "message": message}, ensure_ascii=False))
+        diagnostic = exception_diagnostic(exc)
+        if isinstance(exc, (ValueError, FileNotFoundError)):
+            diagnostic["message"] = str(exc)
+        print(json.dumps({"status": "failed", **diagnostic}, ensure_ascii=False))
         return 2
 
 
