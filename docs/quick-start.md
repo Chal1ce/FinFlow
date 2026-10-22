@@ -43,7 +43,7 @@ python -m workflow.flywheel_cli run
 python -m workflow.flywheel_cli status
 ```
 
-配置报错时可参考[本机环境检查记录](environment-check.md)，包含实际预检与启动失败截图、缺项说明和补齐步骤。
+配置报错时可参考[环境配置排查](environment-check.md)，了解预检方法、常见缺项和补齐步骤。
 
 ## 4. 自动运行
 

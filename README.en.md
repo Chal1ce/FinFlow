@@ -88,7 +88,7 @@ For manual financial workflows or existing OCR, use `python -m workflow.cli list
 | Financial Agent: prepare without checkpoints, governed table tasks, SFT → GRPO | [Agentic RL guide (Chinese)](agent/trainers/rl/README.md) |
 | Generation methods and learned mixtures | [Methods](docs/en/training-methods.md) · [Mixtures](docs/en/data-mixtures.md) · [DoReMi / RegMix](docs/en/mixture-experiments.md) |
 | Existing v5/v6 exports | [Existing release export](docs/en/pretraining.md) |
-| Actual missing configuration | [Environment check](docs/en/environment-check.md) |
+| Configuration troubleshooting | [Configuration guide](docs/en/environment-check.md) |
 | Detailed OCR, acquisition, governance, CLI, operations | [Reference guides; detailed pages in Chinese](docs/en/reference.md) |
 | Add bilingual pages or images | [Documentation authoring](docs/en/docs-authoring.md) |
 | Publish the website | [GitHub Pages](docs/en/github-pages.md) |

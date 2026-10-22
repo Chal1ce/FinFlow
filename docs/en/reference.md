@@ -23,5 +23,5 @@ Configuration source files:
 [flywheel recipe](https://github.com/Chal1ce/FinFlow/blob/main/config/flywheel.json).
 
 English pages cover [documentation authoring](docs-authoring.md),
-[Pages publishing](github-pages.md), and the actual recorded configuration failure
-in [Environment check](environment-check.md).
+[Pages publishing](github-pages.md), and
+[Configuration troubleshooting](environment-check.md).

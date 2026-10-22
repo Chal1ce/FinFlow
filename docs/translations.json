@@ -16,7 +16,7 @@
     "coverage": "full"
   },
   "data-flywheel": {
-    "source_sha256": "427ae216b1adc66dd078a1c161694d1037f34ddba2d88b42749d5a0cb4f83d5f",
+    "source_sha256": "481f489457519ff668e2230c92c283eff7a494afb2da728bc4a147d154153115",
     "coverage": "summary"
   },
   "data-mixtures": {
@@ -28,7 +28,7 @@
     "coverage": "full"
   },
   "environment-check": {
-    "source_sha256": "de80073ba0cdb36fdb5c341e7b70cd9a2d22cb1de30e4633627ca6368c3f5888",
+    "source_sha256": "f5ef2881e23b96d566204ad816220e3e4649ce8d64d57a2312fef211c2709a3e",
     "coverage": "summary"
   },
   "github-pages": {
@@ -36,7 +36,7 @@
     "coverage": "full"
   },
   "index": {
-    "source_sha256": "cfae592ae9a9130b519bfe921bab944541da5309ff773776950f5478f4e3dfba",
+    "source_sha256": "01ccff274c4bf01e7e256058d995916f8cf3e7bf4451c475f11632a0115af900",
     "coverage": "summary"
   },
   "mixture-experiments": {
@@ -56,7 +56,7 @@
     "coverage": "full"
   },
   "quick-start": {
-    "source_sha256": "ba5a6a66c9058f661aa16b804726939ae741d1ba78069c77a98e0369702cb2a0",
+    "source_sha256": "22330c83eb2e9990a5a8f46871021fa8842f55e548d69b11f02b50346a1952c3",
     "coverage": "full"
   },
   "reference": {

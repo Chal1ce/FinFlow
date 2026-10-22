@@ -61,4 +61,4 @@ FIN_DOC_PRETRAIN_TOKENIZER=/absolute/path/to/target-model/tokenizer.json
 
 密钥仅保存在本机配置，不提交到仓库。tokenizer 应与目标模型对应。
 
-补齐后重新执行预检，再按[每日数据飞轮](data-flywheel.md)运行。通过配方中的 `source_policy` 设置各来源的训练准入。
+补齐后重新执行预检，再按[每日数据飞轮](data-flywheel.md)运行。来源训练准入需在配方中明确配置；采集成功本身不代表候选可进入训练集。

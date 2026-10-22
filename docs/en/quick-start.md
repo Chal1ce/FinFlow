@@ -44,7 +44,7 @@ python -m workflow.flywheel_cli run
 python -m workflow.flywheel_cli status
 ```
 
-For a real example of missing configuration, see the [Environment check record](environment-check.md).
+See [Configuration troubleshooting](environment-check.md) for preflight checks and missing fields.
 
 ## 4. Schedule daily runs
 

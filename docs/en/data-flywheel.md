@@ -303,7 +303,7 @@ data, synthetic documents, a test tokenizer, and injected model responses. Forma
 CLI publishing does not enable those fake responses. Real discovery/OCR services,
 model authentication, description quality, provider usage, human sampling, and
 scheduler operation still require a configured real run. See the
-[environment check](environment-check.md) for the recorded configuration failure.
+[configuration troubleshooting guide](environment-check.md) for preflight and missing fields.
 Long-running logs need system rotation; cumulative scans and evidence snapshots
 will need batching and retention as the dataset grows.
 
